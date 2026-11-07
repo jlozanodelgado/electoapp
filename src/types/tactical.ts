@@ -14,3 +14,4 @@ export interface CuadranteTactico {
   puestosCapturados: number;
   censoTotalCapturado: number;
 }
+

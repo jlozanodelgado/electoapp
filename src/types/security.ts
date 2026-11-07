@@ -24,7 +24,12 @@ export interface BaseActor {
   // The candidate this actor is linked to (if any). For the "total supervisor"
   // this can be undefined because they oversee the whole system.
   candidatoId?: string;
+  // Optional generic fields used by some actors – they are not required for every role.
+  scopeLevel?: ScopeLevel;   // e.g., "national", "department", "municipality"
+  scopeId?: string;          // identifier for department/municipality when needed
+  leaderId?: string;         // reference to a leader when the actor is a witness or voter
 }
+
 
 /**
  * The highest‑level role. Has visibility over every candidate and every

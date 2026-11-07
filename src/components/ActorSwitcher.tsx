@@ -4,13 +4,13 @@ import { useSecurityStore } from '../store/securityStore';
 /**
  * Simple dropdown to switch the active security actor.
  * It reads the list of actors from the security store and sets the
- * currentActorId when the user selects a different option.
+ * currentActor when the user selects a different option.
  */
 export const ActorSwitcher: React.FC = () => {
-  const { actors, currentActorId, setCurrentActorId } = useSecurityStore(state => ({
+  const { actors, currentActorId, setCurrentActor } = useSecurityStore(state => ({
     actors: state.actors,
     currentActorId: state.currentActorId,
-    setCurrentActorId: state.setCurrentActorId,
+    setCurrentActor: state.setCurrentActor,
   }));
 
   return (
@@ -21,12 +21,12 @@ export const ActorSwitcher: React.FC = () => {
       <select
         className="w-full rounded border-gray-600 bg-gray-700 text-white"
         value={currentActorId ?? ''}
-        onChange={e => setCurrentActorId(e.target.value || null)}
+        onChange={e => setCurrentActor(e.target.value || null)}
       >
         <option value="">— Ninguno —</option>
         {actors.map(actor => (
           <option key={actor.id} value={actor.id}>
-            {actor.nombre} ({actor.rol})
+            {actor.nombre} ({actor.role})
           </option>
         ))}
       </select>

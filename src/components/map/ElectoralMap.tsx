@@ -45,9 +45,11 @@ export const ElectoralMap: React.FC = () => {
     L.control.zoom({ position: 'bottomright' }).addTo(map);
 
     // Basemap CartoDB Dark Matter (tema oscuro táctico GovTech)
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
-      subdomains: 'abcd',
+      subdomains: 'abc',
+      attribution:
+        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
     }).addTo(map);
 
     // Capa de marcadores
@@ -309,8 +311,8 @@ export const ElectoralMap: React.FC = () => {
   }, [mostrarHeatmap, puestos]);
 
   return (
-    <div className="relative w-full h-full overflow-hidden bg-slate-950">
-      <div ref={mapContainerRef} className="w-full h-full z-0" />
+    <div className="relative w-full h-full overflow-hidden bg-slate-950" style={{ minHeight: '400px' }}>
+      <div ref={mapContainerRef} className="absolute inset-0 z-0" />
       
       {/* Leyenda de Mapa Táctica */}
       <div className="absolute bottom-6 left-6 z-[1000] bg-slate-900/90 backdrop-blur-md border border-slate-800 rounded-xl p-3 shadow-2xl text-xs space-y-1.5 select-none pointer-events-auto">

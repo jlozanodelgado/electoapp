@@ -161,10 +161,6 @@ export const useElectoralStore = create<ElectoralState>((set, get) => ({
         departamentoId: 'todos', 
         municipioId: 'todos', 
         zona: 'todas',
-  tipoBasemap: 'dark',
-  cuadrantes: [],
-  isDrawingPolygon: false,
-  drawingPoints: [], 
         nivelTerritorial: 'nacional',
         selectedPuestoId: null 
       });
@@ -173,10 +169,6 @@ export const useElectoralStore = create<ElectoralState>((set, get) => ({
         departamentoId: depId, 
         municipioId: 'todos', 
         zona: 'todas',
-  tipoBasemap: 'dark',
-  cuadrantes: [],
-  isDrawingPolygon: false,
-  drawingPoints: [], 
         nivelTerritorial: 'departamental',
         selectedPuestoId: null 
       });
@@ -188,10 +180,6 @@ export const useElectoralStore = create<ElectoralState>((set, get) => ({
       set({ 
         municipioId: 'todos', 
         zona: 'todas',
-  tipoBasemap: 'dark',
-  cuadrantes: [],
-  isDrawingPolygon: false,
-  drawingPoints: [], 
         nivelTerritorial: get().departamentoId === 'todos' ? 'nacional' : 'departamental',
         selectedPuestoId: null 
       });
@@ -199,10 +187,6 @@ export const useElectoralStore = create<ElectoralState>((set, get) => ({
       set({ 
         municipioId: munId, 
         zona: 'todas',
-  tipoBasemap: 'dark',
-  cuadrantes: [],
-  isDrawingPolygon: false,
-  drawingPoints: [], 
         nivelTerritorial: 'municipal',
         selectedPuestoId: null 
       });

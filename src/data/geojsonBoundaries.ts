@@ -104,6 +104,65 @@ export const MUNICIPIOS_GEOJSON: FeatureCollection<Polygon> = {
   features: [
     {
       type: 'Feature',
+      id: 'tulua',
+      properties: {
+        id: 'tulua',
+        departamentoId: 'valle',
+        nombre: 'Tuluá (Corazón del Valle)',
+        codigo: '76834',
+        partidoDominante: 'coalicion',
+        participacionPct: 61.2,
+        abstencionismoPct: 38.8,
+        margenVictoriaPct: 22.4,
+        censo: 178500,
+        color: '#10b981',
+      },
+      geometry: {
+        type: 'Polygon',
+        coordinates: [
+          [
+            [-76.245, 4.135],
+            [-76.160, 4.140],
+            [-76.120, 4.095],
+            [-76.080, 4.020],
+            [-76.140, 4.015],
+            [-76.220, 4.045],
+            [-76.250, 4.090],
+            [-76.245, 4.135]
+          ]
+        ]
+      }
+    },
+    {
+      type: 'Feature',
+      id: 'buga',
+      properties: {
+        id: 'buga',
+        departamentoId: 'valle',
+        nombre: 'Guadalajara de Buga',
+        codigo: '76111',
+        partidoDominante: 'coalicion',
+        participacionPct: 58.5,
+        abstencionismoPct: 41.5,
+        margenVictoriaPct: 18.0,
+        censo: 105000,
+        color: '#10b981',
+      },
+      geometry: {
+        type: 'Polygon',
+        coordinates: [
+          [
+            [-76.320, 3.940],
+            [-76.260, 3.945],
+            [-76.250, 3.860],
+            [-76.330, 3.865],
+            [-76.320, 3.940]
+          ]
+        ]
+      }
+    },
+    {
+      type: 'Feature',
       id: 'bogota',
       properties: {
         id: 'bogota',

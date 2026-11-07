@@ -14,11 +14,11 @@ import {
 } from '../data/mockElectoralData';
 
 const STORAGE_KEYS = {
-  PUESTOS: 'electoapp_puestos_v1',
-  TESTIGOS: 'electoapp_testigos_v1',
-  VOTANTES: 'electoapp_votantes_v1',
-  ACTAS: 'electoapp_actas_v1',
-  ALERTAS: 'electoapp_alertas_v1',
+  PUESTOS: 'electoapp_tulua_puestos_v1',
+  TESTIGOS: 'electoapp_tulua_testigos_v1',
+  VOTANTES: 'electoapp_tulua_votantes_v1',
+  ACTAS: 'electoapp_tulua_actas_v1',
+  ALERTAS: 'electoapp_tulua_alertas_v1',
 };
 
 class SupabasePostGISMockService {

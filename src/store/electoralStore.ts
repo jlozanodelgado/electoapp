@@ -94,9 +94,9 @@ interface ElectoralState {
 
 export const useElectoralStore = create<ElectoralState>((set, get) => ({
   moduloActivo: 'mapa',
-  nivelTerritorial: 'nacional',
-  departamentoId: 'todos',
-  municipioId: 'todos',
+  nivelTerritorial: 'municipal',
+  departamentoId: 'valle',
+  municipioId: 'tulua',
   zona: 'todas',
 
   capaMetrica: 'partido_dominante',

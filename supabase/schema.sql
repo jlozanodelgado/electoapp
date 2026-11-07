@@ -199,6 +199,7 @@ ALTER TABLE public.votantes_crm ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.actas_e14 ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.alertas_fraude ENABLE ROW LEVEL SECURITY;
 
+-- General read policies (keep permissive for demo)
 CREATE POLICY "Permitir lectura general" ON public.departamentos FOR ALL USING (true);
 CREATE POLICY "Permitir lectura general" ON public.municipios FOR ALL USING (true);
 CREATE POLICY "Permitir lectura general" ON public.puestos_votacion FOR ALL USING (true);
@@ -207,6 +208,41 @@ CREATE POLICY "Permitir lectura y mutaciones" ON public.testigos_electorales FOR
 CREATE POLICY "Permitir lectura y mutaciones" ON public.votantes_crm FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Permitir lectura y mutaciones" ON public.actas_e14 FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Permitir lectura y mutaciones" ON public.alertas_fraude FOR ALL USING (true) WITH CHECK (true);
+
+-- 13. SECURITY ACTORS TABLE ---------------------------------------------------
+CREATE TYPE public.actor_role AS ENUM (
+  'totalSupervisor',
+  'candidateSupervisor',
+  'leader',
+  'witness',
+  'voter'
+);
+CREATE TYPE public.scope_level AS ENUM (
+  'national',
+  'department',
+  'municipality'
+);
+
+CREATE TABLE IF NOT EXISTS public.actors (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  nombre TEXT NOT NULL,
+  role actor_role NOT NULL,
+  candidato_id UUID NULL,
+  scope_level scope_level NULL,
+  scope_id TEXT NULL,
+  leader_id UUID NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Optional foreign keys (candidates table may not exist yet, comment if undefined)
+-- ALTER TABLE public.actors ADD CONSTRAINT fk_candidate FOREIGN KEY (candidato_id) REFERENCES public.candidatos(id) ON DELETE SET NULL;
+ALTER TABLE public.actors ADD CONSTRAINT fk_leader FOREIGN KEY (leader_id) REFERENCES public.actors(id) ON DELETE SET NULL;
+
+-- Row‑level security for actors
+ALTER TABLE public.actors ENABLE ROW LEVEL SECURITY;
+CREATE POLICY actor_total_supervisor_all ON public.actors FOR ALL USING (auth.role() = 'totalSupervisor');
+CREATE POLICY actor_candidate_supervisor ON public.actors FOR ALL USING (auth.role() = 'candidateSupervisor' AND candidato_id = auth.uid());
+CREATE POLICY actor_leader_manage ON public.actors FOR ALL USING (auth.role() = 'leader' AND leader_id = auth.uid());
 
 -- ==============================================================================
 -- 13. SEMILLAS DEPARTAMENTOS Y MUNICIPIOS (FOCO: TULUÁ, VALLE DEL CAUCA)

@@ -1,16 +1,10 @@
-import { 
-  PuestoVotacion, 
-  TestigoElectoral, 
-  VotanteCRM, 
-  ActaE14, 
-  AlertaFraude 
-} from '../types/electoral';
-import { 
-  PUESTOS_VOTACION, 
-  TESTIGOS_INICIALES, 
-  VOTANTES_INICIALES, 
-  ACTAS_E14_INICIALES, 
-  ALERTAS_FRAUDE_INICIALES 
+import { PuestoVotacion, TestigoElectoral, VotanteCRM, ActaE14, AlertaFraude } from '../types/electoral';
+import {
+  PUESTOS_VOTACION,
+  TESTIGOS_INICIALES,
+  VOTANTES_INICIALES,
+  ACTAS_E14_INICIALES,
+  ALERTAS_FRAUDE_INICIALES,
 } from '../data/mockElectoralData';
 
 const STORAGE_KEYS = {
@@ -21,13 +15,16 @@ const STORAGE_KEYS = {
   ALERTAS: 'electoapp_tulua_alertas_v1',
 };
 
+const ACTORS_KEY = 'electoapp_actors_v1';
+
 class SupabasePostGISMockService {
+  // Generic localStorage helpers
   private getStorage<T>(key: string, defaultData: T): T {
     try {
       const saved = localStorage.getItem(key);
-      if (saved) return JSON.parse(saved);
+      if (saved) return JSON.parse(saved) as T;
     } catch (e) {
-      console.warn('LocalStorage error, using defaults', e);
+      console.warn('LocalStorage read error for', key, e);
     }
     return defaultData;
   }
@@ -36,84 +33,88 @@ class SupabasePostGISMockService {
     try {
       localStorage.setItem(key, JSON.stringify(data));
     } catch (e) {
-      console.warn('LocalStorage save error', e);
+      console.warn('LocalStorage write error for', key, e);
     }
   }
 
-  // Puestos
+  // ---------------------------------------------------------------------
+  // Puestos (voting places)
+  // ---------------------------------------------------------------------
   getPuestos(): PuestoVotacion[] {
     return this.getStorage(STORAGE_KEYS.PUESTOS, PUESTOS_VOTACION);
   }
 
   updatePuesto(id: string, updates: Partial<PuestoVotacion>): PuestoVotacion[] {
-    const list = this.getPuestos().map(p => p.id === id ? { ...p, ...updates } : p);
-    this.setStorage(STORAGE_KEYS.PUESTOS, list);
-    return list;
+    const updated = this.getPuestos().map(p => (p.id === id ? { ...p, ...updates } : p));
+    this.setStorage(STORAGE_KEYS.PUESTOS, updated);
+    return updated;
   }
 
-  // Testigos
+  // ---------------------------------------------------------------------
+  // Testigos (electoral witnesses)
+  // ---------------------------------------------------------------------
   getTestigos(): TestigoElectoral[] {
     return this.getStorage(STORAGE_KEYS.TESTIGOS, TESTIGOS_INICIALES);
   }
 
   addTestigo(testigo: Omit<TestigoElectoral, 'id'>): TestigoElectoral {
     const list = this.getTestigos();
-    const nuevo: TestigoElectoral = {
-      ...testigo,
-      id: `testigo-${Date.now()}`
-    };
+    const nuevo: TestigoElectoral = { ...testigo, id: `testigo-${Date.now()}` };
     list.unshift(nuevo);
     this.setStorage(STORAGE_KEYS.TESTIGOS, list);
     return nuevo;
   }
 
   updateTestigo(id: string, updates: Partial<TestigoElectoral>): TestigoElectoral[] {
-    const list = this.getTestigos().map(t => t.id === id ? { ...t, ...updates } : t);
-    this.setStorage(STORAGE_KEYS.TESTIGOS, list);
-    return list;
+    const updated = this.getTestigos().map(t => (t.id === id ? { ...t, ...updates } : t));
+    this.setStorage(STORAGE_KEYS.TESTIGOS, updated);
+    return updated;
   }
 
-  // Votantes CRM
+  // ---------------------------------------------------------------------
+  // Votantes (CRM voters)
+  // ---------------------------------------------------------------------
   getVotantes(): VotanteCRM[] {
     return this.getStorage(STORAGE_KEYS.VOTANTES, VOTANTES_INICIALES);
   }
 
   addVotante(votante: Omit<VotanteCRM, 'id'>): VotanteCRM {
     const list = this.getVotantes();
-    const nuevo: VotanteCRM = {
-      ...votante,
-      id: `votante-${Date.now()}`
-    };
+    const nuevo: VotanteCRM = { ...votante, id: `votante-${Date.now()}` };
     list.unshift(nuevo);
     this.setStorage(STORAGE_KEYS.VOTANTES, list);
     return nuevo;
   }
 
   updateVotante(id: string, updates: Partial<VotanteCRM>): VotanteCRM[] {
-    const list = this.getVotantes().map(v => v.id === id ? { ...v, ...updates } : v);
-    this.setStorage(STORAGE_KEYS.VOTANTES, list);
-    return list;
+    const updated = this.getVotantes().map(v => (v.id === id ? { ...v, ...updates } : v));
+    this.setStorage(STORAGE_KEYS.VOTANTES, updated);
+    return updated;
   }
 
-  // Actas E-14
+  // ---------------------------------------------------------------------
+  // Actas E14 (electoral act records)
+  // ---------------------------------------------------------------------
   getActasE14(): ActaE14[] {
     return this.getStorage(STORAGE_KEYS.ACTAS, ACTAS_E14_INICIALES);
   }
 
   addActaE14(acta: Omit<ActaE14, 'id'>): { acta: ActaE14; nuevaAlerta?: AlertaFraude } {
     const list = this.getActasE14();
-    const nuevo: ActaE14 = {
-      ...acta,
-      id: `acta-e14-${Date.now()}`
-    };
+    const nuevo: ActaE14 = { ...acta, id: `acta-e14-${Date.now()}` };
     list.unshift(nuevo);
     this.setStorage(STORAGE_KEYS.ACTAS, list);
 
-    // Detección automática de fraude / anomalía
+    // Fraud detection logic (unchanged)
     let nuevaAlerta: AlertaFraude | undefined;
-    const totalSuma = acta.votosCoalicion + acta.votosAlianza + acta.votosUnidad + acta.votosOtros + acta.votosBlanco + acta.votosNulos + acta.votosNoMarcados;
-    
-    // Alerta 1: Discrepancia entre suma y total urna
+    const totalSuma =
+      acta.votosCoalicion +
+      acta.votosAlianza +
+      acta.votosUnidad +
+      acta.votosOtros +
+      acta.votosBlanco +
+      acta.votosNulos +
+      acta.votosNoMarcados;
     if (Math.abs(totalSuma - acta.totalVotosUrna) > 5) {
       nuevaAlerta = this.addAlertaFraude({
         puestoId: acta.puestoId,
@@ -125,8 +126,7 @@ class SupabasePostGISMockService {
         timestamp: new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }),
         resuelta: false,
       });
-    } else if (acta.votosNulos > (acta.totalVotosUrna * 0.12)) {
-      // Alerta 2: Votos nulos anormalmente altos (> 12%)
+    } else if (acta.votosNulos > acta.totalVotosUrna * 0.12) {
       nuevaAlerta = this.addAlertaFraude({
         puestoId: acta.puestoId,
         puestoNombre: `Puesto ${acta.puestoId}`,
@@ -138,59 +138,89 @@ class SupabasePostGISMockService {
         resuelta: false,
       });
     }
-
     return { acta: nuevo, nuevaAlerta };
   }
 
+  // ---------------------------------------------------------------------
   // Alertas de fraude
+  // ---------------------------------------------------------------------
   getAlertas(): AlertaFraude[] {
     return this.getStorage(STORAGE_KEYS.ALERTAS, ALERTAS_FRAUDE_INICIALES);
   }
 
   addAlertaFraude(alerta: Omit<AlertaFraude, 'id'>): AlertaFraude {
     const list = this.getAlertas();
-    const nuevo: AlertaFraude = {
-      ...alerta,
-      id: `alerta-${Date.now()}`
-    };
+    const nuevo: AlertaFraude = { ...alerta, id: `alerta-${Date.now()}` };
     list.unshift(nuevo);
     this.setStorage(STORAGE_KEYS.ALERTAS, list);
     return nuevo;
   }
 
   resolverAlerta(id: string): AlertaFraude[] {
-    const list = this.getAlertas().map(a => a.id === id ? { ...a, resuelta: true } : a);
-    this.setStorage(STORAGE_KEYS.ALERTAS, list);
+    const updated = this.getAlertas().map(a => (a.id === id ? { ...a, resuelta: true } : a));
+    this.setStorage(STORAGE_KEYS.ALERTAS, updated);
+    return updated;
+  }
+
+  // ---------------------------------------------------------------------
+  // Seguridad: actores (supervisores, líderes, etc.)
+  // ---------------------------------------------------------------------
+  getActors(): any[] {
+    try {
+      const saved = localStorage.getItem(ACTORS_KEY);
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      console.warn('LocalStorage error for actors', e);
+    }
+    return [];
+  }
+
+  createActor(actor: any): any[] {
+    const list = this.getActors();
+    const nuevo = { ...actor, id: actor.id ?? `actor-${Date.now()}` };
+    list.unshift(nuevo);
+    this.setStorage(ACTORS_KEY, list);
     return list;
   }
 
-  // Simulación PostGIS: ST_DWithin (puntos a menos de X km de una coordenada)
+  updateActor(id: string, updates: any): any[] {
+    const updated = this.getActors().map(a => (a.id === id ? { ...a, ...updates } : a));
+    this.setStorage(ACTORS_KEY, updated);
+    return updated;
+  }
+
+  deleteActor(id: string): any[] {
+    const filtered = this.getActors().filter(a => a.id !== id);
+    this.setStorage(ACTORS_KEY, filtered);
+    return filtered;
+  }
+
+  // ---------------------------------------------------------------------
+  // PostGIS simulation (ST_DWithin)
+  // ---------------------------------------------------------------------
   postgisST_DWithin(centerLat: number, centerLng: number, radiusKm: number): PuestoVotacion[] {
     const puestos = this.getPuestos();
     const toRad = (deg: number) => (deg * Math.PI) / 180;
-    const R = 6371; // Radio tierra en km
-
+    const R = 6371; // Earth radius in km
     return puestos.filter(p => {
       const dLat = toRad(p.lat - centerLat);
       const dLng = toRad(p.lng - centerLng);
-      const a = 
+      const a =
         Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-        Math.cos(toRad(centerLat)) * Math.cos(toRad(p.lat)) *
-        Math.sin(dLng / 2) * Math.sin(dLng / 2);
+        Math.cos(toRad(centerLat)) * Math.cos(toRad(p.lat)) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
       const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
       const distance = R * c;
       return distance <= radiusKm;
     });
   }
 
+  // ---------------------------------------------------------------------
+  // Reset helpers
+  // ---------------------------------------------------------------------
   resetToDefaults(): void {
-    localStorage.removeItem(STORAGE_KEYS.PUESTOS);
-    localStorage.removeItem(STORAGE_KEYS.TESTIGOS);
-    localStorage.removeItem(STORAGE_KEYS.VOTANTES);
-    localStorage.removeItem(STORAGE_KEYS.ACTAS);
-    localStorage.removeItem(STORAGE_KEYS.ALERTAS);
+    Object.values(STORAGE_KEYS).forEach(key => localStorage.removeItem(key));
+    localStorage.removeItem(ACTORS_KEY);
   }
 }
 
 export const supabaseMock = new SupabasePostGISMockService();
-

@@ -12,13 +12,28 @@ import { DigitalizeE14Modal } from './components/modals/DigitalizeE14Modal';
 import { FraudAlertModal } from './components/modals/FraudAlertModal';
 import { ToastContainer } from './components/ui/ToastContainer';
 
+import { useSecurityStore } from './store/securityStore';
+import { useEffect } from 'react';
+import { ActorSwitcher } from './components/ActorSwitcher';
+
+
+
 export const App: React.FC = () => {
+  // Load security actors on app start
+  const loadActors = useSecurityStore(state => state.loadActors);
+  useEffect(() => {
+    loadActors();
+  }, [loadActors]);
+
   const { moduloActivo } = useElectoralStore();
 
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden bg-[#090d16] text-slate-100 select-none">
       {/* Navbar Superior */}
-      <Navbar />
+      <div className="flex items-center space-x-4">
+        <ActorSwitcher />
+        <Navbar />
+      </div>
 
       {/* Cuerpo Principal */}
       <div className="flex flex-1 overflow-hidden relative">

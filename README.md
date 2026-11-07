@@ -38,19 +38,5 @@
 - **Modelación de Curules (Sistema D'Hondt):** Proyección del reparto de escaños en corporaciones públicas.
 - **Centro de Exportación:** Descarga instantánea de puestos, testigos y CRM en `.csv`, `.xls` y `.geojson`.
 
----
 
-## 🛠️ Instalación y Ejecución
-
-En la carpeta del proyecto (`c:\Users\carme\Proyectos Antigravity\electoapp`):
-
-```bash
-# 1. Instalar dependencias
-npm install
-
-# 2. Iniciar servidor de desarrollo en http://localhost:3000
-npm run dev
-
-# 3. Compilar para producción
-npm run build
 ```

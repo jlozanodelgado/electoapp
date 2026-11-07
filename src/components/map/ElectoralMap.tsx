@@ -60,15 +60,13 @@ export const ElectoralMap: React.FC = () => {
       attributionControl: false,
     });
 
-    // ------------------- TILE LAYER OSCURO -----------------------
-    // CartoDB Dark Matter – estilo oscuro que combina con nuestra UI
+    // OpenStreetMap base layer – usamos CSS filter para modo oscuro
     L.tileLayer(
-      'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+      'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
       {
         maxZoom: 19,
-        subdomains: 'abc',
         attribution:
-          '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors • <a href="https://carto.com/">CartoDB</a>',
+          '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
       },
     ).addTo(map);
     // -------------------------------------------------------------
@@ -407,7 +405,7 @@ export const ElectoralMap: React.FC = () => {
   // -----------------------------------------------------------------
   return (
     <div
-      className="relative w-full h-full overflow-hidden bg-slate-950"
+      className="relative w-full h-full overflow-hidden bg-slate-950 filter invert brightness-75"
       style={{ minHeight: '400px' }}
     >
       <div ref={mapContainerRef} className="absolute inset-0 z-0" />

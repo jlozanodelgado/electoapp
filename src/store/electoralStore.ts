@@ -8,7 +8,8 @@ import {
   ActaE14, 
   AlertaFraude 
 } from '../types/electoral';
-import { Toast } from '../types/tactical';
+import { Toast, CuadranteTactico, TipoBasemap } from '../types/tactical';
+import { isPointInPolygon } from '../utils/geoUtils';
 import { supabaseMock } from '../services/supabaseMock';
 
 export type ModuloActivo = 'mapa' | 'campana' | 'dia_d' | 'ejecutivo';
@@ -21,12 +22,18 @@ interface ElectoralState {
   zona: string;
   
   // Capas y filtros del mapa
+  tipoBasemap: TipoBasemap;
   capaMetrica: CapaMetrica;
   partidoFiltro: string;
   busquedaTexto: string;
   mostrarHeatmap: boolean;
   radioInfluenciaKm: number | null;
   centroRadio: [number, number] | null;
+
+  // Cuadrantes y Dibujo de Polígonos
+  cuadrantes: CuadranteTactico[];
+  isDrawingPolygon: boolean;
+  drawingPoints: [number, number][];
 
   // Selección
   selectedPuestoId: string | null;
@@ -98,6 +105,10 @@ export const useElectoralStore = create<ElectoralState>((set, get) => ({
   departamentoId: 'valle',
   municipioId: 'tulua',
   zona: 'todas',
+  tipoBasemap: 'dark',
+  cuadrantes: [],
+  isDrawingPolygon: false,
+  drawingPoints: [],
 
   capaMetrica: 'partido_dominante',
   partidoFiltro: 'todos',
@@ -149,7 +160,11 @@ export const useElectoralStore = create<ElectoralState>((set, get) => ({
       set({ 
         departamentoId: 'todos', 
         municipioId: 'todos', 
-        zona: 'todas', 
+        zona: 'todas',
+  tipoBasemap: 'dark',
+  cuadrantes: [],
+  isDrawingPolygon: false,
+  drawingPoints: [], 
         nivelTerritorial: 'nacional',
         selectedPuestoId: null 
       });
@@ -157,7 +172,11 @@ export const useElectoralStore = create<ElectoralState>((set, get) => ({
       set({ 
         departamentoId: depId, 
         municipioId: 'todos', 
-        zona: 'todas', 
+        zona: 'todas',
+  tipoBasemap: 'dark',
+  cuadrantes: [],
+  isDrawingPolygon: false,
+  drawingPoints: [], 
         nivelTerritorial: 'departamental',
         selectedPuestoId: null 
       });
@@ -168,14 +187,22 @@ export const useElectoralStore = create<ElectoralState>((set, get) => ({
     if (munId === 'todos') {
       set({ 
         municipioId: 'todos', 
-        zona: 'todas', 
+        zona: 'todas',
+  tipoBasemap: 'dark',
+  cuadrantes: [],
+  isDrawingPolygon: false,
+  drawingPoints: [], 
         nivelTerritorial: get().departamentoId === 'todos' ? 'nacional' : 'departamental',
         selectedPuestoId: null 
       });
     } else {
       set({ 
         municipioId: munId, 
-        zona: 'todas', 
+        zona: 'todas',
+  tipoBasemap: 'dark',
+  cuadrantes: [],
+  isDrawingPolygon: false,
+  drawingPoints: [], 
         nivelTerritorial: 'municipal',
         selectedPuestoId: null 
       });

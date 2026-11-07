@@ -15,3 +15,4 @@ export interface CuadranteTactico {
   censoTotalCapturado: number;
 }
 
+export type TipoBasemap = 'dark' | 'satellite' | 'light';

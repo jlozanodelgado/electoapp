@@ -99,12 +99,12 @@ export const ElectoralMap: React.FC = () => {
 
     switch (tipoBasemap) {
       case 'dark':
-        url = 'https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+        url = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
         options.attribution =
           '&copy; <a href="https://carto.com/attributions">CARTO</a>';
         break;
       case 'light':
-        url = 'https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+        url = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
         options.attribution =
           '&copy; <a href="https://carto.com/attributions">CARTO</a>';
         break;

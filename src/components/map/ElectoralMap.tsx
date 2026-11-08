@@ -99,14 +99,14 @@ export const ElectoralMap: React.FC = () => {
 
     switch (tipoBasemap) {
       case 'dark':
-        url = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+        url = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
         options.attribution =
-          '&copy; <a href="https://carto.com/attributions">CARTO</a>';
+          '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
         break;
       case 'light':
-        url = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+        url = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
         options.attribution =
-          '&copy; <a href="https://carto.com/attributions">CARTO</a>';
+          '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
         break;
       case 'satellite':
         url =
@@ -440,7 +440,11 @@ export const ElectoralMap: React.FC = () => {
   // -----------------------------------------------------------------
   return (
     <div
-      className="relative w-full h-full overflow-hidden bg-slate-950"
+      className={`relative w-full h-full overflow-hidden bg-slate-950 ${
+        tipoBasemap === 'dark'
+          ? 'filter invert grayscale-[90%] brightness-60 contrast-[1.2]'
+          : ''
+      }`}
       style={{ minHeight: '400px' }}
     >
       <div ref={mapContainerRef} className="absolute inset-0 z-0" />

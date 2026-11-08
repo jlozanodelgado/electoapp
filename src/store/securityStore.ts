@@ -7,18 +7,20 @@ import type { User } from '@supabase/supabase-js';
 
 // Helper to normalize an actor coming from PostgreSQL
 function normalizeActor(raw: any): Actor {
-  const role =
-    raw.role ||
-    raw.rol ||
-    (raw.nivel === 0
-      ? 'totalSupervisor'
-      : raw.nivel === 1
-      ? 'candidateSupervisor'
-      : raw.nivel === 2
-      ? 'leader'
-      : raw.nivel === 3
-      ? 'witness'
-      : 'voter');
+  const rawRol = String(raw.rol || raw.role || '').toLowerCase();
+  
+  let role: Actor['role'] = 'voter';
+  if (rawRol.includes('supervisor_total') || rawRol.includes('totalsupervisor') || raw.nivel === 0) {
+    role = 'totalSupervisor';
+  } else if (rawRol.includes('supervisor_candidato') || rawRol.includes('candidatesupervisor') || raw.nivel === 1) {
+    role = 'candidateSupervisor';
+  } else if (rawRol.includes('lider') || rawRol.includes('leader') || raw.nivel === 2) {
+    role = 'leader';
+  } else if (rawRol.includes('testigo') || rawRol.includes('witness') || raw.nivel === 3) {
+    role = 'witness';
+  } else {
+    role = 'voter';
+  }
 
   return {
     ...raw,
@@ -68,7 +70,6 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
     const { data, error } = await getSupabase().from('actors').select('*');
     if (error) {
       console.warn('Failed to load actors', error);
-      set({ actors: [] });
       return;
     }
     const normalized = (data || []).map(normalizeActor);
@@ -86,9 +87,21 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
         ? 3
         : 4;
 
+    // En la base de datos se almacena en el formato que espera el enum
+    const rolDb =
+      actor.role === 'totalSupervisor'
+        ? 'supervisor_total'
+        : actor.role === 'candidateSupervisor'
+        ? 'supervisor_candidato'
+        : actor.role === 'leader'
+        ? 'lider'
+        : actor.role === 'witness'
+        ? 'testigo'
+        : 'votante';
+
     const dbPayload = {
       nombre: actor.nombre,
-      rol: actor.role,
+      rol: rolDb,
       nivel,
       user_id: actor.user_id || null,
       scope_level: actor.scopeLevel || null,
@@ -156,7 +169,7 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
       return user;
     }
 
-    // 2) Buscar por nombre para vincular si ya existía antes de tener user_id
+    // 2) Buscar por nombre si no tiene user_id asignado aún
     const { data: actorByName, error: err2 } = await getSupabase()
       .from('actors')
       .select('*')

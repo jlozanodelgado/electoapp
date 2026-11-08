@@ -20,20 +20,26 @@ export const ActorSwitcher: React.FC = () => {
   const isCandidateSupervisor = activeActor?.role === 'candidateSupervisor';
   const canCreateUsers = isSupervisorTotal || isCandidateSupervisor;
 
+  // Si no hay actor seleccionado pero hay actores disponibles, auto-seleccionar el primero
+  React.useEffect(() => {
+    if (!currentActorId && actors.length > 0) {
+      setCurrentActor(actors[0].id);
+    }
+  }, [currentActorId, actors, setCurrentActor]);
+
   return (
     <>
-      <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-xl shadow-inner">
+      <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-xl shadow-inner shrink-0">
         <div className="flex items-center gap-1.5 text-xs text-slate-400">
           <ShieldCheck className={`w-4 h-4 ${isSupervisorTotal ? 'text-emerald-400' : 'text-blue-400'}`} />
           <span className="hidden sm:inline font-medium">Actor:</span>
         </div>
 
         <select
-          className="text-xs bg-slate-950 border border-slate-700 text-slate-100 rounded-lg px-2 py-1 outline-none focus:border-emerald-500 font-semibold cursor-pointer max-w-[160px] truncate"
-          value={currentActorId ?? ''}
+          className="text-xs bg-slate-950 border border-slate-700 text-slate-100 rounded-lg px-2 py-1 outline-none focus:border-emerald-500 font-semibold cursor-pointer max-w-[190px] truncate"
+          value={currentActorId ?? (actors[0]?.id || '')}
           onChange={e => setCurrentActor(e.target.value || null)}
         >
-          <option value="">— Ninguno —</option>
           {actors.map(actor => (
             <option key={actor.id} value={actor.id}>
               {actor.nombre} ({actor.role})
@@ -45,11 +51,11 @@ export const ActorSwitcher: React.FC = () => {
         {canCreateUsers && (
           <button
             onClick={() => setIsModalOpen(true)}
-            className="flex items-center gap-1 px-2.5 py-1 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 text-xs font-semibold rounded-lg transition-all shadow-sm"
+            className="flex items-center gap-1.5 px-3 py-1 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 text-xs font-bold rounded-lg transition-all shadow-sm shadow-emerald-950/40 whitespace-nowrap"
             title="Crear nuevo usuario / actor jerárquico"
           >
-            <UserPlus className="w-3.5 h-3.5" />
-            <span className="hidden md:inline">Crear Usuario</span>
+            <UserPlus className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Crear Usuario</span>
           </button>
         )}
       </div>

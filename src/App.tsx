@@ -33,7 +33,6 @@ export const App: React.FC = () => {
         <div className="max-w-sm mx-auto mt-20 space-y-6">
           <h2 className="text-xl font-bold text-center">Acceso a ElectoApp</h2>
           <LoginForm />
-          <RegisterForm />
         </div>
       ) : (
         <>

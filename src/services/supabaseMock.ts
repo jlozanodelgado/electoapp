@@ -17,7 +17,94 @@ const STORAGE_KEYS = {
 
 const ACTORS_KEY = 'electoapp_actors_v1';
 
+// ---------------------------------------
+// Users – simple username/password mock auth
+// ---------------------------------------
+
+const USERS_KEY = 'electoapp_users_v1';
+
+export interface User {
+  id: string;
+  username: string;
+  // Plain‑text password – ONLY for demo/mock purposes!
+  password: string;
+  role: 'totalSupervisor' | 'candidateSupervisor' | 'leader' | 'witness' | 'voter';
+}
+
+// Helper to fetch all users from localStorage
+function getStoredUsers(): User[] {
+  try {
+    const saved = localStorage.getItem(USERS_KEY);
+    if (saved) return JSON.parse(saved) as User[];
+  } catch (e) {
+    console.warn('LocalStorage read error for users', e);
+  }
+  return [];
+}
+
+// Simple auth check – returns the user object if credentials match
+async function findUser(username: string): Promise<User | null> {
+  const list = getStoredUsers();
+  const user = list.find(u => u.username === username);
+  return user ?? null;
+}
+
 class SupabasePostGISMockService {
+  // ---- existing generic storage helpers (unchanged) ----
+  // ...
+
+  // ---------------------------------------------------------------------
+  // Users – authentication mock
+  // ---------------------------------------------------------------------
+  getUsers(): User[] {
+    return getStoredUsers();
+  }
+
+  // Register a new user (plain‑text password – NOT for production)
+  registerUser(username: string, password: string, role: User['role']): User {
+    const list = getStoredUsers();
+    if (list.some(u => u.username === username)) {
+      throw new Error('Username already exists');
+    }
+    const newUser: User = { id: `user-${Date.now()}`, username, password, role };
+    const updated = [newUser, ...list];
+    localStorage.setItem(USERS_KEY, JSON.stringify(updated));
+    return newUser;
+  }
+
+  // Authenticate – returns user if credentials match
+  async login(username: string, password: string): Promise<User | null> {
+    const user = await findUser(username);
+    if (user && user.password === password) {
+      return user;
+    }
+    return null;
+  }
+
+  // ---------------------------------------------------------------------
+  // Export all data – returns a pretty‑printed JSON string
+  // ---------------------------------------------------------------------
+  exportAll(): string {
+    const data = {
+      puestos: this.getPuestos(),
+      testigos: this.getTestigos(),
+      votantes: this.getVotantes(),
+      actas: this.getActasE14(),
+      alertas: this.getAlertas(),
+      actors: this.getActors(),
+      users: this.getUsers(),
+    };
+    return JSON.stringify(data, null, 2);
+  }
+
+  // ---------------------------------------------------------------------
+  // Existing methods (unchanged) – kept here for context
+  // ---------------------------------------------------------------------
+  // ... (the rest of the original class stays the same) ...
+}
+
+export const supabaseMock = new SupabasePostGISMockService();
+
   // Generic localStorage helpers
   private getStorage<T>(key: string, defaultData: T): T {
     try {

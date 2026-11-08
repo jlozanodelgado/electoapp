@@ -21,6 +21,59 @@ import { ActorSwitcher } from './components/ActorSwitcher';
 export const App: React.FC = () => {
   // Load security actors on app start
   const loadActors = useSecurityStore(state => state.loadActors);
+  const currentActor = useSecurityStore(state => state.currentActor());
+  const { moduloActivo } = useElectoralStore();
+
+  useEffect(() => {
+    loadActors();
+  }, [loadActors]);
+
+  return (
+    <div className="flex flex-col h-screen w-screen overflow-hidden bg-[#090d16] text-slate-100 select-none">
+      {/* Si no hay actor logueado mostramos login/registro */}
+      {!currentActor ? (
+        <div className="max-w-sm mx-auto mt-20 space-y-6">
+          <h2 className="text-xl font-bold text-center">Acceso a ElectoApp</h2>
+          <LoginForm />
+          <RegisterForm />
+        </div>
+      ) : (
+        <>
+          {/* Navbar Superior */}
+          <div className="flex items-center space-x-4">
+            <ActorSwitcher />
+            <Navbar />
+          </div>
+
+          {/* Cuerpo Principal */}
+          <div className="flex flex-1 overflow-hidden relative">
+            {/* Barra Lateral Retráctil */}
+            <Sidebar />
+
+            {/* Contenido Conmutado por Módulo */}
+            <main className="flex-1 relative overflow-hidden bg-slate-950">
+              {moduloActivo === 'mapa' && <MapViewerModule />}
+              {moduloActivo === 'campana' && <CampaignCommandModule />}
+              {moduloActivo === 'dia_d' && <DayDModule />}
+              {moduloActivo === 'ejecutivo' && <ExecutiveDashboardModule />}
+            </main>
+          </div>
+        </>
+      )}
+
+      {/* Modales Globales */}
+      <NewWitnessModal />
+      <NewVoterModal />
+      <DigitalizeE14Modal />
+      <FraudAlertModal />
+
+      {/* Notificaciones Tácticas Flotantes */}
+      <ToastContainer />
+    </div>
+  );
+};
+  // Load security actors on app start
+  const loadActors = useSecurityStore(state => state.loadActors);
   useEffect(() => {
     loadActors();
   }, [loadActors]);

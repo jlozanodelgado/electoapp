@@ -1,22 +1,38 @@
 import React, { useState } from 'react';
 import { useSecurityStore } from '../store/securityStore';
-import { UserPlus, ShieldCheck } from 'lucide-react';
+import { useElectoralStore } from '../store/electoralStore';
+import { UserPlus, ShieldCheck, Flag, User, Users, Building } from 'lucide-react';
 import { CreateUserModal } from './modals/CreateUserModal';
+import { NewPartidoModal } from './modals/NewPartidoModal';
+import { NewCandidatoModal } from './modals/NewCandidatoModal';
 
 /**
  * Tarjeta de actor activo: muestra nombre y rol sin desplegable.
- * Botón de administración de usuarios para supervisores.
+ * Botones de creación jerárquica según el rol del actor activo.
  */
 export const ActorSwitcher: React.FC = () => {
   const { currentActor } = useSecurityStore(state => ({
     currentActor: state.currentActor,
   }));
+  const {
+    actorRole,
+    setIsNewPartidoOpen,
+    setIsNewCandidatoOpen,
+    setIsNewWitnessOpen,
+    setIsNewVoterOpen,
+  } = useElectoralStore(state => ({
+    actorRole: state.actorRole,
+    setIsNewPartidoOpen: state.setIsNewPartidoOpen,
+    setIsNewCandidatoOpen: state.setIsNewCandidatoOpen,
+    setIsNewWitnessOpen: state.setIsNewWitnessOpen,
+    setIsNewVoterOpen: state.setIsNewVoterOpen,
+  }));
 
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isCreateUserOpen, setIsCreateUserOpen] = useState(false);
   const activeActor = currentActor();
-  const isSupervisorTotal = activeActor?.role === 'totalSupervisor';
-  const isCandidateSupervisor = activeActor?.role === 'candidateSupervisor';
-  const canCreateUsers = isSupervisorTotal || isCandidateSupervisor;
+  const isSupervisorTotal = actorRole === 'totalSupervisor';
+  const isCandidateSupervisor = actorRole === 'candidateSupervisor';
+  const isLider = actorRole === 'leader';
 
   return (
     <>
@@ -35,20 +51,94 @@ export const ActorSwitcher: React.FC = () => {
           </span>
         </div>
 
-        {/* Botón para crear usuarios: habilitado para Supervisor Total y Supervisor de Candidato */}
-        {canCreateUsers && (
+        {/* Botón Crear Usuario (auth) – solo supervisores */}
+        {(isSupervisorTotal || isCandidateSupervisor) && (
           <button
-            onClick={() => setIsModalOpen(true)}
+            onClick={() => setIsCreateUserOpen(true)}
             className="flex items-center gap-1.5 px-3 py-1 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 text-xs font-bold rounded-lg transition-all shadow-sm shadow-emerald-950/40 whitespace-nowrap"
-            title="Crear nuevo usuario / actor jerárquico"
+            title="Crear usuario de autenticación"
           >
             <UserPlus className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Crear Usuario</span>
+            <span>Usuario Auth</span>
           </button>
+        )}
+
+        {/* Botones jerárquicos según rol */}
+        {isSupervisorTotal && (
+          <>
+            <button
+              onClick={() => setIsNewPartidoOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/40 text-blue-300 text-xs font-bold rounded-lg transition-all shadow-sm shadow-blue-950/40 whitespace-nowrap"
+              title="Crear partido político"
+            >
+              <Flag className="w-3.5 h-3.5 text-blue-400" />
+              <span>Partido</span>
+            </button>
+            <button
+              onClick={() => setIsNewCandidatoOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/40 text-blue-300 text-xs font-bold rounded-lg transition-all shadow-sm shadow-blue-950/40 whitespace-nowrap"
+              title="Registrar candidato"
+            >
+              <Building className="w-3.5 h-3.5 text-blue-400" />
+              <span>Candidato</span>
+            </button>
+          </>
+        )}
+
+        {isCandidateSupervisor && (
+          <>
+            <button
+              onClick={() => setIsNewWitnessOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1 bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/40 text-purple-300 text-xs font-bold rounded-lg transition-all shadow-sm shadow-purple-950/40 whitespace-nowrap"
+              title="Crear líder"
+            >
+              <User className="w-3.5 h-3.5 text-purple-400" />
+              <span>Líder</span>
+            </button>
+            <button
+              onClick={() => setIsNewWitnessOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1 bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/40 text-purple-300 text-xs font-bold rounded-lg transition-all shadow-sm shadow-purple-950/40 whitespace-nowrap"
+              title="Crear testigo"
+            >
+              <Users className="w-3.5 h-3.5 text-purple-400" />
+              <span>Testigo</span>
+            </button>
+            <button
+              onClick={() => setIsNewVoterOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1 bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/40 text-purple-300 text-xs font-bold rounded-lg transition-all shadow-sm shadow-purple-950/40 whitespace-nowrap"
+              title="Registrar votante"
+            >
+              <User className="w-3.5 h-3.5 text-purple-400" />
+              <span>Votante</span>
+            </button>
+          </>
+        )}
+
+        {isLider && (
+          <>
+            <button
+              onClick={() => setIsNewWitnessOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1 bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/40 text-rose-300 text-xs font-bold rounded-lg transition-all shadow-sm shadow-rose-950/40 whitespace-nowrap"
+              title="Crear testigo"
+            >
+              <Users className="w-3.5 h-3.5 text-rose-400" />
+              <span>Testigo</span>
+            </button>
+            <button
+              onClick={() => setIsNewVoterOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1 bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/40 text-rose-300 text-xs font-bold rounded-lg transition-all shadow-sm shadow-rose-950/40 whitespace-nowrap"
+              title="Registrar votante"
+            >
+              <User className="w-3.5 h-3.5 text-rose-400" />
+              <span>Votante</span>
+            </button>
+          </>
         )}
       </div>
 
-      <CreateUserModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+      <CreateUserModal isOpen={isCreateUserOpen} onClose={() => setIsCreateUserOpen(false)} />
+      <NewPartidoModal />
+      <NewCandidatoModal />
     </>
   );
 };

@@ -66,29 +66,58 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
       console.warn('Login failed', error);
       return null;
     }
-    // fetch associated actor
+
+    const nombre = (user!.user_metadata?.full_name as string) || email.split('@')[0];
+
+    // Try to fetch an existing actor linked to this user
     const { data: actorData, error: actorErr } = await getSupabase()
       .from('actors')
       .select('*')
       .eq('user_id', user!.id)
       .single();
+
     if (!actorErr && actorData) {
-      set({ currentActorId: (actorData as Actor).id, actors: [actorData as Actor, ...get().actors.filter(a => a.id !== (actorData as Actor).id)] });
-    } else {
-      // No actor linked – create one automatically so the user can enter the app
-      const nombre = (user!.user_metadata?.full_name as string) || email.split('@')[0];
-      const newActor: Omit<Actor, 'id'> = { nombre, role: 'voter', user_id: user!.id } as any;
-      const { data: inserted, error: insErr } = await getSupabase()
-        .from('actors')
-        .insert(newActor)
-        .select('*')
-        .single();
-      if (!insErr && inserted) {
-        set({ currentActorId: (inserted as Actor).id, actors: [inserted as Actor, ...get().actors] });
-      } else {
-        console.warn('Could not auto-create actor after login', insErr);
-      }
+      // Actor found in DB – use it
+      const actor = actorData as Actor;
+      set({
+        currentActorId: actor.id,
+        actors: [actor, ...get().actors.filter(a => a.id !== actor.id)],
+      });
+      return user;
     }
+
+    console.warn('No actor found for user, attempting to create one…', actorErr);
+
+    // Try to auto-create an actor in the DB
+    const { data: inserted, error: insErr } = await getSupabase()
+      .from('actors')
+      .insert({ nombre, role: 'voter', user_id: user!.id })
+      .select('*')
+      .single();
+
+    if (!insErr && inserted) {
+      const actor = inserted as Actor;
+      set({
+        currentActorId: actor.id,
+        actors: [actor, ...get().actors],
+      });
+      return user;
+    }
+
+    console.warn('Could not create actor in DB, using temporary in-memory actor', insErr);
+
+    // Fallback: create a temporary in-memory actor so the user can still enter
+    const tempActor: Actor = {
+      id: `temp-${user!.id}`,
+      nombre,
+      role: 'voter',
+      user_id: user!.id,
+    } as Actor;
+    set({
+      currentActorId: tempActor.id,
+      actors: [tempActor, ...get().actors],
+    });
+
     return user;
   },
   registerUser: async (email, password, role) => {

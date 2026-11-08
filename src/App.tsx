@@ -14,13 +14,15 @@ import { ToastContainer } from './components/ui/ToastContainer';
 import { useSecurityStore } from './store/securityStore';
 import { ActorSwitcher } from './components/ActorSwitcher';
 import { LoginForm } from './components/auth/LoginForm';
-import { RegisterForm } from './components/auth/RegisterForm';
 
 export const App: React.FC = () => {
   // Load security actors on app start
   const loadActors = useSecurityStore(state => state.loadActors);
-  const currentActor = useSecurityStore(state => state.currentActor());
+  const currentActorId = useSecurityStore(state => state.currentActorId);
+  const actors = useSecurityStore(state => state.actors);
   const { moduloActivo } = useElectoralStore();
+
+  const currentActor = actors.find(a => a.id === currentActorId);
 
   useEffect(() => {
     loadActors();

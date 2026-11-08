@@ -46,7 +46,7 @@ async function findUser(username: string): Promise<User | null> {
 
 class SupabasePostGISMockService {
   // Generic localStorage helpers
-  getStorage<T>(key: string, defaultData: T): T {
+  private getStorage<T>(key: string, defaultData: T): T {
     try {
       const saved = localStorage.getItem(key);
       if (saved) return JSON.parse(saved) as T;
@@ -56,7 +56,7 @@ class SupabasePostGISMockService {
     return defaultData;
   }
 
-  setStorage<T>(key: string, data: T): void {
+  private setStorage<T>(key: string, data: T): void {
     try {
       localStorage.setItem(key, JSON.stringify(data));
     } catch (e) {

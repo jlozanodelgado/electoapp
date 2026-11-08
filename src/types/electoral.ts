@@ -93,6 +93,7 @@ export interface Candidato {
   apellido?: string;
   cedula: string;
   cargo: string; // 'presidente', 'alcalde', 'concejal', etc.
+  numeroTarjeton?: string;
   departamentoId?: string;
   municipioId?: string;
   fotoUrl?: string;

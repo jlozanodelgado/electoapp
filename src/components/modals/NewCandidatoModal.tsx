@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useElectoralStore } from '../../store/electoralStore';
 import { Button } from '../ui/Button';
-import { X, User, Building } from 'lucide-react';
+import { X, User, Building, ImageOff } from 'lucide-react';
 
 export const NewCandidatoModal: React.FC = () => {
   const { candidatos, partidos, addCandidato, setIsNewCandidatoOpen } = useElectoralStore();
@@ -9,8 +9,10 @@ export const NewCandidatoModal: React.FC = () => {
   const [nombre, setNombre] = useState('');
   const [apellido, setApellido] = useState('');
   const [cedula, setCedula] = useState('');
+  const [numeroTarjeton, setNumeroTarjeton] = useState('');
   const [cargo, setCargo] = useState('concejal');
   const [departamentoId, setDepartamentoId] = useState('');
+  const [fotoUrl, setFotoUrl] = useState('');
 
   const cargos = [
     { value: 'presidente', label: 'Presidente' },
@@ -44,15 +46,19 @@ export const NewCandidatoModal: React.FC = () => {
       nombre,
       apellido: apellido || undefined,
       cedula,
+      numeroTarjeton: numeroTarjeton || undefined,
       cargo,
       departamentoId: departamentoId || undefined,
+      fotoUrl: fotoUrl || undefined,
     });
 
     setIsNewCandidatoOpen(false);
     setNombre('');
     setApellido('');
     setCedula('');
+    setNumeroTarjeton('');
     setPartidoId(partidos[0].id);
+    setFotoUrl('');
   };
 
   return (
@@ -80,7 +86,7 @@ export const NewCandidatoModal: React.FC = () => {
               className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:outline-none focus:border-emerald-500"
               required
             >
-              {partidos.map(p => (
+              {partidos.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.nombre} ({p.siglas})
                 </option>
@@ -125,6 +131,17 @@ export const NewCandidatoModal: React.FC = () => {
           </div>
 
           <div>
+            <label className="text-slate-400 block mb-1 font-medium">Número de Tarjetón</label>
+            <input
+              type="text"
+              placeholder="Ej. 045"
+              value={numeroTarjeton}
+              onChange={(e) => setNumeroTarjeton(e.target.value)}
+              className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 font-mono focus:outline-none focus:border-emerald-500"
+            />
+          </div>
+
+          <div>
             <label className="text-slate-400 block mb-1 font-medium">Cargo</label>
             <select
               value={cargo}
@@ -132,8 +149,10 @@ export const NewCandidatoModal: React.FC = () => {
               className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:outline-none focus:border-emerald-500"
               required
             >
-              {cargos.map(c => (
-                <option key={c.value} value={c.value}>{c.label}</option>
+              {cargos.map((c) => (
+                <option key={c.value} value={c.value}>
+                  {c.label}
+                </option>
               ))}
             </select>
           </div>
@@ -146,10 +165,40 @@ export const NewCandidatoModal: React.FC = () => {
               className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:outline-none focus:border-emerald-500"
             >
               <option value="">Nacional / Todos</option>
-              {departamentos.map(d => (
+              {departamentos.map((d) => (
                 <option key={d.id} value={d.id}>{d.nombre}</option>
               ))}
             </select>
+          </div>
+
+          <div>
+            <label className="text-slate-400 block mb-1 font-medium">Foto del Candidato (opcional)</label>
+            <div className="flex items-center gap-3">
+              <input
+                type="url"
+                placeholder="https://ejemplo.com/foto.jpg"
+                value={fotoUrl}
+                onChange={(e) => setFotoUrl(e.target.value)}
+                className="flex-1 bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:outline-none focus:border-emerald-500"
+              />
+              <div className="w-10 h-10 rounded-full overflow-hidden border border-slate-700 bg-slate-800">
+                {fotoUrl ? (
+                  <img
+                    src={fotoUrl}
+                    alt={nombre}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = 'none';
+                    }}
+                  />
+                ) : (
+                  <ImageOff className="w-5 h-5 text-slate-400" />
+                )}
+              </div>
+            </div>
+            <p className="text-[10px] text-slate-500 mt-0.5">
+              Si no subes foto, se mostrará una silueta genérica.
+            </p>
           </div>
 
           <div className="pt-3 border-t border-slate-800 flex justify-end gap-2">
@@ -167,7 +216,6 @@ export const NewCandidatoModal: React.FC = () => {
               size="sm"
               icon={<Building className="w-4 h-4" />}
               disabled={!nombre || !cedula || !partidoId}
-              onClick={handleSubmit}
             >
               Registrar Candidato
             </Button>

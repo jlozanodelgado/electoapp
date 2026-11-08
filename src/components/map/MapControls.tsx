@@ -1,6 +1,7 @@
 import React from 'react';
 import { useElectoralStore } from '../../store/electoralStore';
 import { CapaMetrica } from '../../types/electoral';
+import { TipoBasemap } from '../../types/tactical';
 import { 
   Layers, 
   Flame, 
@@ -9,7 +10,11 @@ import {
   Filter, 
   MapPin,
   TrendingUp,
-  Users
+  Users,
+  Moon,
+  Sun,
+  Satellite,
+  Layout
 } from 'lucide-react';
 
 export const MapControls: React.FC = () => {
@@ -22,6 +27,8 @@ export const MapControls: React.FC = () => {
     setBusquedaTexto,
     mostrarHeatmap,
     setMostrarHeatmap,
+    tipoBasemap,
+    setTipoBasemap,
     radioInfluenciaKm,
     setRadioInfluencia,
     puestos,
@@ -45,6 +52,14 @@ export const MapControls: React.FC = () => {
         p.comunaBarrio.toLowerCase().includes(busquedaTexto.toLowerCase())
       ).slice(0, 5)
     : [];
+
+  // Estilos de mapa disponibles
+  const basemaps: Array<{ id: TipoBasemap; label: string; icon: React.ReactNode }> = [
+    { id: 'dark', label: 'Oscuro', icon: <Moon className="w-3.5 h-3.5" /> },
+    { id: 'light', label: 'Claro', icon: <Sun className="w-3.5 h-3.5" /> },
+    { id: 'satellite', label: 'Satelital', icon: <Satellite className="w-3.5 h-3.5" /> },
+    { id: 'lines', label: 'Solo Líneas', icon: <Layout className="w-3.5 h-3.5" /> },
+  ];
 
   return (
     <div className="absolute top-4 left-4 z-[1000] flex flex-col gap-2.5 max-w-sm w-full pointer-events-auto">
@@ -173,6 +188,34 @@ export const MapControls: React.FC = () => {
                 </button>
               )}
             </div>
+          </div>
+        </div>
+
+        {/* Selector de Estilo del Mapa (Basemap) */}
+        <div className="pt-2 border-t border-slate-800/80 space-y-2">
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-[10px] font-bold text-slate-200 uppercase tracking-wider">
+              Estilo Mapa
+            </span>
+          </div>
+          <div className="grid grid-cols-2 gap-1">
+            {basemaps.map(b => {
+              const isSelected = tipoBasemap === b.id;
+              return (
+                <button
+                  key={b.id}
+                  onClick={() => setTipoBasemap(b.id)}
+                  className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                    isSelected
+                      ? 'bg-emerald-500/20 border border-emerald-500/50 text-emerald-300 shadow-sm'
+                      : 'bg-slate-950/70 hover:bg-slate-800/80 border border-slate-800 text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  {b.icon}
+                  <span className="truncate">{b.label}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>

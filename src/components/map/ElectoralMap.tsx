@@ -27,6 +27,7 @@ export const ElectoralMap: React.FC = () => {
   const markersLayerRef = useRef<L.LayerGroup | null>(null);
   const bufferCircleRef = useRef<L.Circle | null>(null);
   const heatmapLayerRef = useRef<L.LayerGroup | null>(null);
+  const baseLayerRef = useRef<L.TileLayer | null>(null);
 
   // -----------------------------------------------------------------
   // Estado del store que controla el mapa
@@ -42,6 +43,7 @@ export const ElectoralMap: React.FC = () => {
     puestos,
     mostrarHeatmap,
     radioInfluenciaKm,
+    tipoBasemap,
     setDepartamentoId,
     setMunicipioId,
   } = useElectoralStore();
@@ -59,17 +61,6 @@ export const ElectoralMap: React.FC = () => {
       zoomControl: false,
       attributionControl: false,
     });
-
-    // OpenStreetMap base layer – usamos CSS filter para modo oscuro
-    L.tileLayer(
-      'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-      {
-        maxZoom: 19,
-        attribution:
-          '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-      },
-    ).addTo(map);
-    // -------------------------------------------------------------
 
     // Controles de zoom en la esquina inferior derecha
     L.control.zoom({ position: 'bottomright' }).addTo(map);
@@ -89,6 +80,50 @@ export const ElectoralMap: React.FC = () => {
       mapInstanceRef.current = null;
     };
   }, []);
+
+  // -----------------------------------------------------------------
+  // Capa base dinámica según tipoBasemap (dark / light / satellite / lines)
+  // -----------------------------------------------------------------
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+
+    // Remover capa base anterior si existía
+    if (baseLayerRef.current) {
+      map.removeLayer(baseLayerRef.current);
+      baseLayerRef.current = null;
+    }
+
+    let url: string;
+    const options: L.TileLayerOptions = { maxZoom: 19 };
+
+    switch (tipoBasemap) {
+      case 'dark':
+        url = 'https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+        options.attribution =
+          '&copy; <a href="https://carto.com/attributions">CARTO</a>';
+        break;
+      case 'light':
+        url = 'https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+        options.attribution =
+          '&copy; <a href="https://carto.com/attributions">CARTO</a>';
+        break;
+      case 'satellite':
+        url =
+          'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+        options.attribution = '&copy; Esri';
+        break;
+      case 'lines':
+      default:
+        url = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+        options.attribution =
+          '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+        break;
+    }
+
+    const layer = L.tileLayer(url, options).addTo(map);
+    baseLayerRef.current = layer;
+  }, [tipoBasemap]);
 
   // -----------------------------------------------------------------
   // 2️⃣  Zoom / FlyTo según nivel territorial o puesto seleccionado
@@ -405,7 +440,7 @@ export const ElectoralMap: React.FC = () => {
   // -----------------------------------------------------------------
   return (
     <div
-      className="relative w-full h-full overflow-hidden bg-slate-950 filter invert brightness-75"
+      className="relative w-full h-full overflow-hidden bg-slate-950"
       style={{ minHeight: '400px' }}
     >
       <div ref={mapContainerRef} className="absolute inset-0 z-0" />

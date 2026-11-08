@@ -70,6 +70,7 @@ interface ElectoralState {
   setPartidoFiltro: (partido: string) => void;
   setBusquedaTexto: (busqueda: string) => void;
   setMostrarHeatmap: (mostrar: boolean) => void;
+  setTipoBasemap: (tipo: TipoBasemap) => void;
   setRadioInfluencia: (km: number | null, centro?: [number, number] | null) => void;
 
   setSelectedPuestoId: (id: string | null) => void;
@@ -198,6 +199,7 @@ export const useElectoralStore = create<ElectoralState>((set, get) => ({
   setPartidoFiltro: (partido) => set({ partidoFiltro: partido }),
   setBusquedaTexto: (busquedaTexto) => set({ busquedaTexto }),
   setMostrarHeatmap: (mostrarHeatmap) => set({ mostrarHeatmap }),
+  setTipoBasemap: (tipo) => set({ tipoBasemap: tipo }),
   
   setRadioInfluencia: (km, centro = null) => {
     set({ radioInfluenciaKm: km, centroRadio: centro });

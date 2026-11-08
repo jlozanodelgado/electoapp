@@ -1,11 +1,20 @@
 import React, { useState } from 'react';
 import { useElectoralStore } from '../../store/electoralStore';
 import { Button } from '../ui/Button';
-import { RolTestigo, EstadoTestigo } from '../../types/electoral';
+import { RolTestigo, EstadoTestigo, Actor } from '../../types/electoral';
 import { X, UserPlus, ShieldCheck } from 'lucide-react';
 
 export const NewWitnessModal: React.FC = () => {
-  const { isNewWitnessOpen, setIsNewWitnessOpen, puestos, selectedPuestoId, addTestigo } = useElectoralStore();
+  const {
+    isNewWitnessOpen,
+    setIsNewWitnessOpen,
+    puestos,
+    selectedPuestoId,
+    addTestigo,
+    actors,
+    actorId,
+    actorRole,
+  } = useElectoralStore();
 
   const [puestoId, setPuestoId] = useState(selectedPuestoId || puestos[0]?.id || '');
   const [mesaNumero, setMesaNumero] = useState(1);
@@ -14,6 +23,21 @@ export const NewWitnessModal: React.FC = () => {
   const [telefono, setTelefono] = useState('');
   const [rol, setRol] = useState<RolTestigo>('testigo_mesa');
   const [estado, setEstado] = useState<EstadoTestigo>('confirmado');
+  const [leaderId, setLeaderId] = useState<string | undefined>(undefined);
+
+  // Líderes disponibles según el rol del creador
+  const lideresDisponibles = actors.filter(a => a.role === 'leader');
+
+  const lideresFiltrados = actorRole === 'candidateSupervisor' && actorId
+    ? lideresDisponibles.filter(l => l.supervisorId === actorId)
+    : lideresDisponibles;
+
+  // Si el creador es líder, su propio id es el leaderId por defecto
+  React.useEffect(() => {
+    if (actorRole === 'leader' && actorId && !leaderId) {
+      setLeaderId(actorId ?? undefined);
+    }
+  }, [actorRole, actorId, leaderId]);
 
   if (!isNewWitnessOpen) return null;
 
@@ -22,6 +46,7 @@ export const NewWitnessModal: React.FC = () => {
     if (!nombre || !cedula) return;
 
     const puesto = puestos.find(p => p.id === puestoId);
+    const finalLeaderId = actorRole === 'leader' ? actorId ?? undefined : leaderId;
 
     addTestigo({
       puestoId,
@@ -33,12 +58,14 @@ export const NewWitnessModal: React.FC = () => {
       rol,
       estado,
       horaLlegada: estado === 'confirmado' ? '07:00 AM' : undefined,
+      leaderId: finalLeaderId,
     });
 
     setIsNewWitnessOpen(false);
     setNombre('');
     setCedula('');
     setTelefono('');
+    setLeaderId(undefined);
   };
 
   return (
@@ -100,6 +127,30 @@ export const NewWitnessModal: React.FC = () => {
               </select>
             </div>
           </div>
+
+          {lideresFiltrados.length > 0 && (
+            <div>
+              <label className="text-slate-400 block mb-1 font-medium">Líder Responsable</label>
+              <select
+                value={leaderId || ''}
+                onChange={(e) => setLeaderId(e.target.value || undefined)}
+                className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:outline-none focus:border-emerald-500"
+              >
+                <option value="">Seleccionar líder</option>
+                {lideresFiltrados.map(l => (
+                  <option key={l.id} value={l.id}>
+                    {l.nombre} ({l.scopeLevel || 'sin territorio'})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {lideresFiltrados.length === 0 && actorRole !== 'leader' && (
+            <div className="p-2 rounded bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs">
+              No hay líderes disponibles para asignar. Crea un líder primero.
+            </div>
+          )}
 
           <div>
             <label className="text-slate-400 block mb-1 font-medium">Nombre y Apellidos</label>

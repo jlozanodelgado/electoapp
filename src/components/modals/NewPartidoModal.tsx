@@ -61,7 +61,7 @@ export const NewPartidoModal: React.FC = () => {
             <input
               type="text"
               placeholder="Ej. CPC"
-              maxLength="10"
+              maxLength={10}
               value={siglas}
               onChange={(e) => setSiglas(e.target.value.toUpperCase())}
               className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 font-mono font-bold focus:outline-none focus:border-emerald-500"

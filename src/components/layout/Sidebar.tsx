@@ -12,7 +12,8 @@ import {
   FileCheck2,
   Users2,
   CheckCircle2,
-  Clock
+  Clock,
+  User
 } from 'lucide-react';
 
 export const Sidebar: React.FC = () => {
@@ -36,6 +37,12 @@ export const Sidebar: React.FC = () => {
       label: 'Comando de Campaña',
       desc: 'CRM Votantes y Testigos',
       icon: <Target className="w-5 h-5" />,
+    },
+    {
+      id: 'candidatos',
+      label: 'Candidatos',
+      desc: 'Listado y detalle de candidatos',
+      icon: <User className="w-5 h-5" />,
     },
     {
       id: 'preparacion',

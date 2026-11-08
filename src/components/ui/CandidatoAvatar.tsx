@@ -4,10 +4,11 @@ import { ImageOff, User } from 'lucide-react';
 interface CandidatoAvatarProps {
   fotoUrl?: string;
   nombre?: string;
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'xs' | 'sm' | 'md' | 'lg';
 }
 
-const sizeClasses: Record<'sm' | 'md' | 'lg', string> = {
+const sizeClasses: Record<'xs' | 'sm' | 'md' | 'lg', string> = {
+  xs: 'w-6 h-6',
   sm: 'w-8 h-8',
   md: 'w-12 h-12',
   lg: 'w-16 h-16',
@@ -31,7 +32,7 @@ export const CandidatoAvatar: React.FC<CandidatoAvatarProps> = ({
         />
       ) : (
         <div className="w-full h-full flex items-center justify-center bg-slate-700/50">
-          <User className="w-1/2 h-1/2 text-slate-400" />
+          <User className={`w-${size === 'xs' ? '1/3' : '1/2'} h-${size === 'xs' ? '1/3' : '1/2'} text-slate-400`} />
         </div>
       )}
     </div>

@@ -20,8 +20,10 @@ import {
   Download,
   Check,
   CheckCircle2,
-  Car
+  Car,
+  Building
 } from 'lucide-react';
+import { CandidatoAvatar } from '../ui/CandidatoAvatar';
 
 export const CampaignCommandModule: React.FC = () => {
   const [tab, setTab] = useState<'testigos' | 'crm'>('testigos');
@@ -33,6 +35,7 @@ export const CampaignCommandModule: React.FC = () => {
     votantes,
     puestos,
     actors,
+    candidatos,
     actorId,
     actorRole,
     updateTestigoEstado,
@@ -89,6 +92,20 @@ export const CampaignCommandModule: React.FC = () => {
     const matchEstado = filtroEstado === 'todos' || t.estado === filtroEstado;
     return matchBusqueda && matchEstado;
   });
+
+  // Helper para obtener el candidato asociado a un actor (líder o testigo/votante vía líder)
+  const getCandidatoDelActor = (actorId: string | undefined) => {
+    if (!actorId) return undefined;
+    const actor = actors.find((a) => a.id === actorId);
+    if (!actor) return undefined;
+    if (actor.role === 'candidateSupervisor') {
+      return candidatos.find((c) => c.id === actor.candidatoId);
+    }
+    if (actor.role === 'leader') {
+      return candidatos.find((c) => c.id === actor.candidatoId);
+    }
+    return undefined;
+  };
 
   // Filtrado de votantes
   const votantesFiltrados = votantesConAcceso.filter(v => {
@@ -289,66 +306,83 @@ export const CampaignCommandModule: React.FC = () => {
                     <th className="p-3 text-center">Mesa</th>
                     <th className="p-3">Rol</th>
                     <th className="p-3">Estado</th>
+                    <th className="p-3 text-center">Candidato</th>
                     <th className="p-3 text-right">Acciones Rápidas</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/60 font-sans">
-                  {testigosFiltrados.map((t) => (
-                    <tr key={t.id} className="hover:bg-slate-800/40 transition-colors">
-                      <td className="p-3">
-                        <p className="font-semibold text-white">{t.nombre}</p>
-                        <p className="text-[11px] text-slate-400 font-mono">C.C. {t.cedula}</p>
-                        <p className="text-[11px] text-emerald-400 font-mono">{t.telefono}</p>
-                      </td>
-                      <td className="p-3">
-                        <p className="font-medium text-slate-200">{t.puestoNombre}</p>
-                        <span className="text-[10px] text-slate-500 font-mono">ID: {t.puestoId}</span>
-                      </td>
-                      <td className="p-3 text-center">
-                        <span className="font-mono font-bold px-2 py-0.5 rounded bg-slate-800 text-slate-200 border border-slate-700">
-                          #{t.mesaNumero}
-                        </span>
-                      </td>
-                      <td className="p-3">
-                        <Badge variant="blue" size="sm">
-                          {t.rol.replace('_', ' ').toUpperCase()}
-                        </Badge>
-                      </td>
-                      <td className="p-3">
-                        <select
-                          value={t.estado}
-                          onChange={(e) => updateTestigoEstado(t.id, e.target.value as any)}
-                          className={`text-xs font-semibold rounded px-2 py-1 border bg-slate-950 focus:outline-none cursor-pointer ${
-                            t.estado === 'confirmado' ? 'border-emerald-500/50 text-emerald-400' :
-                            t.estado === 'pendiente' ? 'border-amber-500/50 text-amber-400' :
-                            'border-rose-500/50 text-rose-400'
-                          }`}
-                        >
-                          <option value="confirmado">Confirmado</option>
-                          <option value="pendiente">Pendiente</option>
-                          <option value="ausente">Ausente</option>
-                        </select>
-                      </td>
-                      <td className="p-3 text-right space-x-1">
-                        <a
-                          href={`https://wa.me/${t.telefono.replace(/[^0-9]/g, '')}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center p-1.5 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/25"
-                          title="Enviar WhatsApp"
-                        >
-                          <MessageSquare className="w-3.5 h-3.5" />
-                        </a>
-                        <a
-                          href={`tel:${t.telefono.replace(/[^0-9]/g, '')}`}
-                          className="inline-flex items-center p-1.5 rounded-lg bg-slate-800 border border-slate-700 text-slate-300 hover:bg-slate-700"
-                          title="Llamar"
-                        >
-                          <Phone className="w-3.5 h-3.5" />
-                        </a>
-                      </td>
-                    </tr>
-                  ))}
+                  {testigosFiltrados.map((t) => {
+                    const lider = actors.find((a) => a.id === t.leaderId);
+                    const candidato = getCandidatoDelActor(t.leaderId);
+                    return (
+                      <tr key={t.id} className="hover:bg-slate-800/40 transition-colors">
+                        <td className="p-3">
+                          <p className="font-semibold text-white">{t.nombre}</p>
+                          <p className="text-[11px] text-slate-400 font-mono">C.C. {t.cedula}</p>
+                          <p className="text-[11px] text-emerald-400 font-mono">{t.telefono}</p>
+                        </td>
+                        <td className="p-3">
+                          <p className="font-medium text-slate-200">{t.puestoNombre}</p>
+                          <span className="text-[10px] text-slate-500 font-mono">ID: {t.puestoId}</span>
+                        </td>
+                        <td className="p-3 text-center">
+                          <span className="font-mono font-bold px-2 py-0.5 rounded bg-slate-800 text-slate-200 border border-slate-700">
+                            #{t.mesaNumero}
+                          </span>
+                        </td>
+                        <td className="p-3">
+                          <Badge variant="blue" size="sm">
+                            {t.rol.replace('_', ' ').toUpperCase()}
+                          </Badge>
+                        </td>
+                        <td className="p-3">
+                          <select
+                            value={t.estado}
+                            onChange={(e) => updateTestigoEstado(t.id, e.target.value as any)}
+                            className={`text-xs font-semibold rounded px-2 py-1 border bg-slate-950 focus:outline-none cursor-pointer ${
+                              t.estado === 'confirmado' ? 'border-emerald-500/50 text-emerald-400' :
+                              t.estado === 'pendiente' ? 'border-amber-500/50 text-amber-400' :
+                              'border-rose-500/50 text-rose-400'
+                            }`}
+                          >
+                            <option value="confirmado">Confirmado</option>
+                            <option value="pendiente">Pendiente</option>
+                            <option value="ausente">Ausente</option>
+                          </select>
+                        </td>
+                        <td className="p-3">
+                          {candidato ? (
+                            <div className="flex items-center gap-2">
+                              <CandidatoAvatar fotoUrl={candidato.fotoUrl} nombre={candidato.nombre} size="xs" />
+                              <span className="text-[10px] text-slate-300 font-medium truncate max-w-[120px]">
+                                {candidato.nombre} {candidato.apellido ?? ''}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-[10px] text-slate-500">Sin candidato</span>
+                          )}
+                        </td>
+                        <td className="p-3 text-right space-x-1">
+                          <a
+                            href={`https://wa.me/${t.telefono.replace(/[^0-9]/g, '')}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center p-1.5 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/25"
+                            title="Enviar WhatsApp"
+                          >
+                            <MessageSquare className="w-3.5 h-3.5" />
+                          </a>
+                          <a
+                            href={`tel:${t.telefono.replace(/[^0-9]/g, '')}`}
+                            className="inline-flex items-center p-1.5 rounded-lg bg-slate-800 border border-slate-700 text-slate-300 hover:bg-slate-700"
+                            title="Llamar"
+                          >
+                            <Phone className="w-3.5 h-3.5" />
+                          </a>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -468,63 +502,80 @@ export const CampaignCommandModule: React.FC = () => {
                     <th className="p-3">Intención</th>
                     <th className="p-3 text-center">Transporte</th>
                     <th className="p-3 text-center">Día D (¿Ya Votó?)</th>
+                    <th className="p-3 text-center">Candidato</th>
                     <th className="p-3 text-right">Contacto</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/60">
-                  {votantesFiltrados.map((v) => (
-                    <tr key={v.id} className="hover:bg-slate-800/40 transition-colors">
-                      <td className="p-3">
-                        <p className="font-semibold text-white">{v.nombre}</p>
-                        <p className="text-[11px] text-slate-400 font-mono">C.C. {v.cedula}</p>
-                      </td>
-                      <td className="p-3">
-                        <p className="text-slate-200 font-medium">{v.barrio}</p>
-                        <p className="text-[11px] text-slate-500 truncate max-w-[160px]">{v.direccion}</p>
-                      </td>
-                      <td className="p-3">
-                        <span className="font-medium text-slate-300">{v.liderAsignado}</span>
-                      </td>
-                      <td className="p-3">
-                        {v.intencionVoto === 'voto_duro' && <Badge variant="emerald">VOTO DURO</Badge>}
-                        {v.intencionVoto === 'voto_blando' && <Badge variant="blue">VOTO BLANDO</Badge>}
-                        {v.intencionVoto === 'indeciso' && <Badge variant="amber">INDECISO</Badge>}
-                        {v.intencionVoto === 'opositor' && <Badge variant="red">OPOSITOR</Badge>}
-                      </td>
-                      <td className="p-3 text-center">
-                        {v.necesitaTransporte ? (
-                          <span className="inline-flex items-center gap-1 text-[11px] text-amber-400 bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded-full font-semibold">
-                            <Car className="w-3 h-3" /> Requiere
-                          </span>
-                        ) : (
-                          <span className="text-slate-500 text-[11px]">No</span>
-                        )}
-                      </td>
-                      <td className="p-3 text-center">
-                        <button
-                          onClick={() => toggleVotanteYaVoto(v.id)}
-                          className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold border transition-all ${
-                            v.yaVoto
-                              ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300 shadow-sm'
-                              : 'bg-slate-800/80 border-slate-700 text-slate-400 hover:text-slate-200'
-                          }`}
-                        >
-                          <Check className={`w-3.5 h-3.5 ${v.yaVoto ? 'text-emerald-400' : 'text-slate-600'}`} />
-                          {v.yaVoto ? 'VOTÓ' : 'PENDIENTE'}
-                        </button>
-                      </td>
-                      <td className="p-3 text-right">
-                        <a
-                          href={`https://wa.me/${v.telefono.replace(/[^0-9]/g, '')}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center p-1.5 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/25"
-                        >
-                          <MessageSquare className="w-3.5 h-3.5" />
-                        </a>
-                      </td>
-                    </tr>
-                  ))}
+                  {votantesFiltrados.map((v) => {
+                    const lider = actors.find((a) => a.id === v.leaderId);
+                    const candidato = getCandidatoDelActor(v.leaderId);
+                    return (
+                      <tr key={v.id} className="hover:bg-slate-800/40 transition-colors">
+                        <td className="p-3">
+                          <p className="font-semibold text-white">{v.nombre}</p>
+                          <p className="text-[11px] text-slate-400 font-mono">C.C. {v.cedula}</p>
+                        </td>
+                        <td className="p-3">
+                          <p className="text-slate-200 font-medium">{v.barrio}</p>
+                          <p className="text-[11px] text-slate-500 truncate max-w-[160px]">{v.direccion}</p>
+                        </td>
+                        <td className="p-3">
+                          <span className="font-medium text-slate-300">{v.liderAsignado}</span>
+                        </td>
+                        <td className="p-3">
+                          {v.intencionVoto === 'voto_duro' && <Badge variant="emerald">VOTO DURO</Badge>}
+                          {v.intencionVoto === 'voto_blando' && <Badge variant="blue">VOTO BLANDO</Badge>}
+                          {v.intencionVoto === 'indeciso' && <Badge variant="amber">INDECISO</Badge>}
+                          {v.intencionVoto === 'opositor' && <Badge variant="red">OPOSITOR</Badge>}
+                        </td>
+                        <td className="p-3 text-center">
+                          {v.necesitaTransporte ? (
+                            <span className="inline-flex items-center gap-1 text-[11px] text-amber-400 bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded-full font-semibold">
+                              <Car className="w-3 h-3" /> Requiere
+                            </span>
+                          ) : (
+                            <span className="text-slate-500 text-[11px]">No</span>
+                          )}
+                        </td>
+                        <td className="p-3 text-center">
+                          <button
+                            onClick={() => toggleVotanteYaVoto(v.id)}
+                            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold border transition-all ${
+                              v.yaVoto
+                                ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300 shadow-sm'
+                                : 'bg-slate-800/80 border-slate-700 text-slate-400 hover:text-slate-200'
+                            }`}
+                          >
+                            <Check className={`w-3.5 h-3.5 ${v.yaVoto ? 'text-emerald-400' : 'text-slate-600'}`} />
+                            {v.yaVoto ? 'VOTÓ' : 'PENDIENTE'}
+                          </button>
+                        </td>
+                        <td className="p-3">
+                          {candidato ? (
+                            <div className="flex items-center gap-2">
+                              <CandidatoAvatar fotoUrl={candidato.fotoUrl} nombre={candidato.nombre} size="xs" />
+                              <span className="text-[10px] text-slate-300 font-medium truncate max-w-[120px]">
+                                {candidato.nombre} {candidato.apellido ?? ''}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-[10px] text-slate-500">Sin candidato</span>
+                          )}
+                        </td>
+                        <td className="p-3 text-right">
+                          <a
+                            href={`https://wa.me/${v.telefono.replace(/[^0-9]/g, '')}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center p-1.5 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/25"
+                          >
+                            <MessageSquare className="w-3.5 h-3.5" />
+                          </a>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

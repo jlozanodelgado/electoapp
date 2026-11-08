@@ -15,7 +15,7 @@ import { Toast, CuadranteTactico, TipoBasemap } from '../types/tactical';
 import { isPointInPolygon } from '../utils/geoUtils';
 import { supabaseMock } from '../services/supabaseMock';
 
-export type ModuloActivo = 'mapa' | 'campana' | 'preparacion' | 'dia_d' | 'ejecutivo';
+export type ModuloActivo = 'mapa' | 'campana' | 'candidatos' | 'preparacion' | 'dia_d' | 'ejecutivo';
 
 interface ElectoralState {
   moduloActivo: ModuloActivo;

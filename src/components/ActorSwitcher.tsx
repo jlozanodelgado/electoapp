@@ -1,16 +1,14 @@
 import React, { useState } from 'react';
 import { useSecurityStore } from '../store/securityStore';
-import { UserPlus, ShieldCheck, ChevronDown } from 'lucide-react';
+import { UserPlus, ShieldCheck } from 'lucide-react';
 import { CreateUserModal } from './modals/CreateUserModal';
 
 /**
- * Dropdown para alternar el actor activo y botón de administración de usuarios.
+ * Tarjeta de actor activo: muestra nombre y rol sin desplegable.
+ * Botón de administración de usuarios para supervisores.
  */
 export const ActorSwitcher: React.FC = () => {
-  const { actors, currentActorId, setCurrentActor, currentActor } = useSecurityStore(state => ({
-    actors: state.actors,
-    currentActorId: state.currentActorId,
-    setCurrentActor: state.setCurrentActor,
+  const { currentActor } = useSecurityStore(state => ({
     currentActor: state.currentActor,
   }));
 
@@ -20,13 +18,6 @@ export const ActorSwitcher: React.FC = () => {
   const isCandidateSupervisor = activeActor?.role === 'candidateSupervisor';
   const canCreateUsers = isSupervisorTotal || isCandidateSupervisor;
 
-  // Si no hay actor seleccionado pero hay actores disponibles, auto-seleccionar el primero
-  React.useEffect(() => {
-    if (!currentActorId && actors.length > 0) {
-      setCurrentActor(actors[0].id);
-    }
-  }, [currentActorId, actors, setCurrentActor]);
-
   return (
     <>
       <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-xl shadow-inner shrink-0">
@@ -35,17 +26,14 @@ export const ActorSwitcher: React.FC = () => {
           <span className="hidden sm:inline font-medium">Actor:</span>
         </div>
 
-        <select
-          className="text-xs bg-slate-950 border border-slate-700 text-slate-100 rounded-lg px-2 py-1 outline-none focus:border-emerald-500 font-semibold cursor-pointer max-w-[190px] truncate"
-          value={currentActorId ?? (actors[0]?.id || '')}
-          onChange={e => setCurrentActor(e.target.value || null)}
-        >
-          {actors.map(actor => (
-            <option key={actor.id} value={actor.id}>
-              {actor.nombre} ({actor.role})
-            </option>
-          ))}
-        </select>
+        <div className="flex flex-col items-start min-w-[160px]">
+          <span className="text-xs font-semibold text-slate-100 truncate">
+            {activeActor?.nombre ?? 'Sin actor'}
+          </span>
+          <span className="text-[10px] text-slate-400 uppercase tracking-wider">
+            {activeActor?.role ?? '-'}
+          </span>
+        </div>
 
         {/* Botón para crear usuarios: habilitado para Supervisor Total y Supervisor de Candidato */}
         {canCreateUsers && (

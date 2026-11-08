@@ -111,3 +111,49 @@
   border-color: #334155 !important;
 }
 
+/* ────────────────────────────────────────────────────
+   Tablas responsivas para móvil
+   ──────────────────────────────────────────────────── */
+.table-responsive {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.table-responsive table {
+  min-width: 600px;
+}
+
+/* ────────────────────────────────────────────────────
+   Modales en móvil: más estrechos y con padding reducido
+   ──────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .modal-mobile {
+    max-w: none !important;
+    width: 95vw !important;
+    max-height: 90vh !important;
+  }
+
+  .modal-mobile .modal-content {
+    padding: 1.5rem !important;
+  }
+
+  /* Ajustar inputs en móvil */
+  .modal-mobile input,
+  .modal-mobile select {
+    text-xs: 14px !important;
+  }
+}
+
+/* ────────────────────────────────────────────────────
+   Grids adaptativos para móvil (1 columna)
+   ──────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .grid-mobile-1 {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ────────────────────────────────────────────────────
+   Botones flotantes móviles ya están en App.tsx
+   ──────────────────────────────────────────────────── */
+

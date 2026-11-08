@@ -10,6 +10,7 @@ export const NewCandidatoModal: React.FC = () => {
   const [apellido, setApellido] = useState('');
   const [cedula, setCedula] = useState('');
   const [numeroTarjeton, setNumeroTarjeton] = useState('');
+  const [numeroLista, setNumeroLista] = useState('');
   const [cargo, setCargo] = useState('concejal');
   const [departamentoId, setDepartamentoId] = useState('');
   const [fotoUrl, setFotoUrl] = useState('');
@@ -54,6 +55,7 @@ export const NewCandidatoModal: React.FC = () => {
   const municipiosDisponibles = municipiosPorDepartamento[departamentoId] || [];
 
   const cargoRequiereMunicipio = cargo === 'concejal' || cargo === 'asamblea_departamental';
+  const cargoRequiereLista = cargo === 'concejal' || cargo === 'asamblea_departamental';
 
   useEffect(() => {
     if (partidos.length > 0 && !partidoId) {
@@ -74,6 +76,7 @@ export const NewCandidatoModal: React.FC = () => {
       apellido: apellido || undefined,
       cedula,
       numeroTarjeton: numeroTarjeton || undefined,
+      numeroLista: cargoRequiereLista ? (numeroLista || undefined) : undefined,
       cargo,
       departamentoId: departamentoId || undefined,
       municipioId: cargoRequiereMunicipio ? municipioId : undefined,
@@ -85,6 +88,7 @@ export const NewCandidatoModal: React.FC = () => {
     setApellido('');
     setCedula('');
     setNumeroTarjeton('');
+    setNumeroLista('');
     setPartidoId(partidos[0].id);
     setMunicipioId('');
     setFotoUrl('');
@@ -169,6 +173,22 @@ export const NewCandidatoModal: React.FC = () => {
               className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 font-mono focus:outline-none focus:border-emerald-500"
             />
           </div>
+
+          {cargoRequiereLista && (
+            <div>
+              <label className="text-slate-400 block mb-1 font-medium">Número de Lista (Partido)</label>
+              <input
+                type="text"
+                placeholder="Ej. 1"
+                value={numeroLista}
+                onChange={(e) => setNumeroLista(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 font-mono focus:outline-none focus:border-emerald-500"
+              />
+              <p className="text-[10px] text-slate-500 mt-0.5">
+                Para corporación, todos los candidatos del mismo partido comparten el mismo número de lista.
+              </p>
+            </div>
+          )}
 
           <div>
             <label className="text-slate-400 block mb-1 font-medium">Cargo</label>

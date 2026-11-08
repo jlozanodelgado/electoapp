@@ -46,6 +46,7 @@ CREATE TABLE IF NOT EXISTS public.candidatos (
   cedula TEXT NOT NULL UNIQUE,
   cargo TEXT NOT NULL, -- 'presidente', 'alcalde', 'concejal', etc.
   numero_tarjeton TEXT,
+  numero_lista TEXT, -- Para cargos de corporación (concejo, asamblea)
   departamento_id TEXT REFERENCES public.departamentos(id) ON DELETE SET NULL,
   municipio_id TEXT REFERENCES public.municipios(id) ON DELETE SET NULL,
   foto_url TEXT,

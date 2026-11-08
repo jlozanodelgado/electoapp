@@ -94,6 +94,7 @@ export interface Candidato {
   cedula: string;
   cargo: string; // 'presidente', 'alcalde', 'concejal', etc.
   numeroTarjeton?: string;
+  numeroLista?: string; // Para cargos de corporación (concejo, asamblea)
   departamentoId?: string;
   municipioId?: string;
   fotoUrl?: string;

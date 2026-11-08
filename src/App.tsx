@@ -11,7 +11,9 @@ import { NewVoterModal } from './components/modals/NewVoterModal';
 import { DigitalizeE14Modal } from './components/modals/DigitalizeE14Modal';
 import { FraudAlertModal } from './components/modals/FraudAlertModal';
 import { ToastContainer } from './components/ui/ToastContainer';
+import { ThemeToggle } from './components/ui/ThemeToggle';
 import { useSecurityStore } from './store/securityStore';
+import { useThemeStore } from './store/themeStore';
 import { ActorSwitcher } from './components/ActorSwitcher';
 import { LoginForm } from './components/auth/LoginForm';
 import { getSupabase } from './services/getSupabase';
@@ -23,8 +25,22 @@ export const App: React.FC = () => {
   const currentActorId = useSecurityStore(state => state.currentActorId);
   const actors = useSecurityStore(state => state.actors);
   const { moduloActivo, setActorId } = useElectoralStore();
+  const { theme, toggleTheme } = useThemeStore();
 
   const currentActor = actors.find(a => a.id === currentActorId);
+  const isDark = theme === 'dark';
+
+  useEffect(() => {
+    if (isDark) {
+      document.documentElement.classList.remove('light');
+      document.documentElement.classList.add('dark');
+      document.documentElement.setAttribute('data-theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      document.documentElement.classList.add('light');
+      document.documentElement.setAttribute('data-theme', 'light');
+    }
+  }, [isDark]);
 
   useEffect(() => {
     let mounted = true;
@@ -41,7 +57,7 @@ export const App: React.FC = () => {
   }, [loadActors, getCurrentActorId, setActorId]);
 
   return (
-    <div className="flex flex-col h-screen w-screen overflow-hidden bg-[#090d16] text-slate-100 select-none">
+      <div className={`flex flex-col h-screen w-screen overflow-hidden select-none ${isDark ? 'bg-[#090d16] text-slate-100' : 'bg-white text-slate-900'}`}>
       {/* Si no hay actor logueado mostramos login/registro */}
       {!currentActor ? (
         <div className="max-w-sm mx-auto mt-20 space-y-6">
@@ -51,8 +67,9 @@ export const App: React.FC = () => {
       ) : (
         <>
           {/* Navbar Superior */}
-          <div className="flex items-center px-4 bg-slate-950 border-b border-slate-800">
+          <div className={`flex items-center px-4 border-b ${isDark ? 'bg-slate-950 border-slate-800' : 'bg-slate-100 border-slate-200'}`}>
             <ActorSwitcher />
+            <ThemeToggle />
             <div className="flex-1">
               <Navbar />
             </div>

@@ -96,3 +96,91 @@
   border: none;
 }
 
+/* ────────────────────────────────────────────────────
+   Tema claro: overrides de colores para legibilidad
+   Se activan cuando html tiene data-theme="light"
+   ──────────────────────────────────────────────────── */
+[data-theme="light"] body {
+  @apply bg-white text-slate-900;
+}
+
+[data-theme="light"] .bg-slate-950,
+[data-theme="light"] .bg-slate-900,
+[data-theme="light"] .bg-slate-800 {
+  background-color: #f8fafc !important;
+}
+
+[data-theme="light"] .bg-slate-950\/95,
+[data-theme="light"] .bg-slate-900\/95,
+[data-theme="light"] .bg-slate-950\/80,
+[data-theme="light"] .bg-slate-900\/80,
+[data-theme="light"] .bg-slate-950\/60,
+[data-theme="light"] .bg-slate-900\/60 {
+  background-color: rgba(248, 250, 252, 0.95) !important;
+}
+
+[data-theme="light"] .text-slate-100 {
+  color: #0f172a !important;
+}
+
+[data-theme="light"] .text-slate-400 {
+  color: #64748b !important;
+}
+
+[data-theme="light"] .text-slate-300 {
+  color: #475569 !important;
+}
+
+[data-theme="light"] .text-slate-200 {
+  color: #334155 !important;
+}
+
+[data-theme="light"] .border-slate-800,
+[data-theme="light"] .border-slate-700 {
+  border-color: #cbd5e1 !important;
+}
+
+[data-theme="light"] .border-slate-600 {
+  border-color: #94a3b8 !important;
+}
+
+[data-theme="light"] .border-slate-800\/80,
+[data-theme="light"] .border-slate-700\/80 {
+  border-color: rgba(203, 213, 225, 0.8) !important;
+}
+
+[data-theme="light"] .shadow-emerald-950\/40,
+[data-theme="light"] .shadow-rose-950\/40,
+[data-theme="light"] .shadow-amber-950\/30,
+[data-theme="light"] .shadow-slate-950\/40 {
+  box-shadow: none !important;
+}
+
+[data-theme="light"] .leaflet-container {
+  background-color: #ffffff !important;
+}
+
+[data-theme="light"] .leaflet-bar a {
+  background-color: #f1f5f9 !important;
+  color: #475569 !important;
+  border-color: #cbd5e1 !important;
+}
+
+[data-theme="light"] .leaflet-bar a:hover {
+  background-color: #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+/* Scrollbars en modo claro */
+[data-theme="light"] ::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+[data-theme="light"] ::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+}
+
+[data-theme="light"] ::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+

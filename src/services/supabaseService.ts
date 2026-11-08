@@ -228,13 +228,13 @@ export class SupabaseService {
     }
   }
 
-  static async saveActaE14(acta: Omit<ActaE14, 'id'>): Promise<{ acta: ActaE14; nuevaAlerta?: AlertaFraude }> {
+  static async saveActaE14(acta: Omit<ActaE14, 'id'>): Promise<ActaE14> {
     const res = supabaseMock.addActaE14(acta);
 
     if (isSupabaseConfigured() && supabase) {
       try {
         await supabase.from('actas_e14').insert({
-          id: res.acta.id,
+          id: res.id,
           puesto_id: acta.puestoId,
           mesa_numero: acta.mesaNumero,
           hora_reporte: acta.horaReporte,
@@ -250,20 +250,6 @@ export class SupabaseService {
           estado_revision: acta.estadoRevision,
           foto_acta_url: acta.fotoActaUrl,
         });
-
-        if (res.nuevaAlerta) {
-          await supabase.from('alertas_fraude').insert({
-            id: res.nuevaAlerta.id,
-            puesto_id: res.nuevaAlerta.puestoId,
-            puesto_nombre: res.nuevaAlerta.puestoNombre,
-            mesa_numero: res.nuevaAlerta.mesaNumero,
-            severidad: res.nuevaAlerta.severidad,
-            tipo: res.nuevaAlerta.tipo,
-            descripcion: res.nuevaAlerta.descripcion,
-            timestamp: res.nuevaAlerta.timestamp,
-            resuelta: false,
-          });
-        }
       } catch (e) {
         console.warn('Error sincronizando acta con Supabase:', e);
       }

@@ -36,11 +36,11 @@ export const DayDModule: React.FC = () => {
 
   // Filtrar actas y alertas propias si es testigo
   const actasFiltradas = isTestigo && actorId
-    ? actas.filter(a => a.actor_id === actorId)
+    ? actas.filter(a => a.leaderId === actorId)
     : actas;
 
   const alertasFiltradas = isTestigo && actorId
-    ? alertas.filter(a => a.actor_id === actorId)
+    ? alertas.filter(a => a.leaderId === actorId)
     : alertas;
 
   // Ticker de simulación en vivo

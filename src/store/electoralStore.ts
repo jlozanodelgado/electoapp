@@ -6,7 +6,10 @@ import {
   TestigoElectoral, 
   VotanteCRM, 
   ActaE14, 
-  AlertaFraude 
+  AlertaFraude,
+  Partido,
+  Candidato,
+  Actor
 } from '../types/electoral';
 import { Toast, CuadranteTactico, TipoBasemap } from '../types/tactical';
 import { isPointInPolygon } from '../utils/geoUtils';
@@ -44,7 +47,10 @@ interface ElectoralState {
   actorRole: string | null;
   setActorId: (id: string | null, role?: string | null) => void;
 
-  // Colecciones de datos
+  // Colecciones de datos jerárquicos
+  partidos: Partido[];
+  candidatos: Candidato[];
+  actors: Actor[];
   puestos: PuestoVotacion[];
   testigos: TestigoElectoral[];
   votantes: VotanteCRM[];
@@ -91,6 +97,14 @@ interface ElectoralState {
   addToast: (toast: Omit<Toast, 'id' | 'timestamp'>) => void;
   removeToast: (id: string) => void;
 
+  // Partidos y Candidatos
+  addPartido: (partido: Omit<Partido, 'id' | 'creadoEn'>) => void;
+  addCandidato: (candidato: Omit<Candidato, 'id' | 'creadoEn'>) => void;
+
+  // Actores jerárquicos
+  addActor: (actor: Omit<Actor, 'id' | 'creadoEn'>) => void;
+  updateActorRole: (id: string, role: Actor['role'], supervisorId?: string, candidatoId?: string, leaderId?: string) => void;
+
   // Mutaciones
   addTestigo: (testigo: Omit<TestigoElectoral, 'id'>) => void;
   updateTestigoEstado: (id: string, estado: TestigoElectoral['estado']) => void;
@@ -128,6 +142,9 @@ export const useElectoralStore = create<ElectoralState>((set, get) => ({
   actorId: null,
   actorRole: null,
 
+  partidos: [],
+  candidatos: [],
+  actors: [],
   puestos: supabaseMock.getPuestos(),
   testigos: supabaseMock.getTestigos(),
   votantes: supabaseMock.getVotantes(),
@@ -223,17 +240,89 @@ export const useElectoralStore = create<ElectoralState>((set, get) => ({
   setDrawerAbierto: (abierto) => set({ drawerAbierto: abierto }),
   setActorId: (id, role = null) => set({ actorId: id, actorRole: role }),
 
+  // Partidos y Candidatos
+  addPartido: (partidoData) => {
+    const nuevo: Partido = {
+      ...partidoData,
+      id: `partido-${Date.now()}`,
+      creadoEn: new Date().toISOString(),
+    };
+    set({ partidos: [nuevo, ...get().partidos] });
+    return nuevo;
+  },
+
+  addCandidato: (candidatoData) => {
+    const nuevo: Candidato = {
+      ...candidatoData,
+      id: `candidato-${Date.now()}`,
+      creadoEn: new Date().toISOString(),
+    };
+    set({ candidatos: [nuevo, ...get().candidatos] });
+    return nuevo;
+  },
+
+  // Actores jerárquicos
+  addActor: (actorData) => {
+    const { actorRole: creadorRole, actorId: creadorId } = get();
+    let supervisorId = actorData.supervisorId;
+    let candidatoId = actorData.candidatoId;
+    let leaderId = actorData.leaderId;
+
+    // Reglas de jerarquía automática según el rol del creador
+    if (creadorRole === 'totalSupervisor') {
+      // totalSupervisor crea partidos y candidatos (no actors directamente con supervisor)
+      supervisorId = undefined;
+      candidatoId = undefined;
+    } else if (creadorRole === 'candidateSupervisor') {
+      // candidateSupervisor crea líderes, testigos, votantes amarrados a sí mismo como supervisor
+      supervisorId = creadorId ?? undefined;
+      candidatoId = actorData.candidatoId ?? get().candidatos.find(c => 
+        get().actors.some(a => a.id === creadorId && a.candidatoId === c.id)
+      )?.id;
+    } else if (creadorRole === 'leader') {
+      // leader crea testigos y votantes amarrados a sí mismo como líder
+      leaderId = creadorId ?? undefined;
+      supervisorId = undefined;
+      candidatoId = undefined;
+    }
+
+    const nuevo: Actor = {
+      ...actorData,
+      id: `actor-${Date.now()}`,
+      supervisorId,
+      candidatoId,
+      leaderId,
+      nivel: actorData.nivel ?? 0,
+      creadoEn: new Date().toISOString(),
+    };
+    set({ actors: [nuevo, ...get().actors] });
+    return nuevo;
+  },
+
+  updateActorRole: (id, role, supervisorId, candidatoId, leaderId) => {
+    set({
+      actors: get().actors.map(a => 
+        a.id === id 
+          ? { ...a, role, supervisorId, candidatoId, leaderId } 
+          : a
+      ),
+    });
+  },
+
   setIsNewWitnessOpen: (open) => set({ isNewWitnessOpen: open }),
   setIsNewVoterOpen: (open) => set({ isNewVoterOpen: open }),
   setIsDigitalizeE14Open: (open) => set({ isDigitalizeE14Open: open }),
   setIsFraudModalOpen: (open, alerta = null) => set({ isFraudModalOpen: open, alertaSeleccionada: alerta }),
 
   addTestigo: (testigoData) => {
-    const testigoConActor = {
+    const { actorId, actorRole } = get();
+    // Un testigo debe estar amarrado a un líder
+    const leaderId = actorRole === 'leader' ? actorId : testigoData.leaderId;
+    const testigoConLider = {
       ...testigoData,
-      actor_id: get().actorId ?? undefined,
+      leaderId: leaderId ?? undefined,
     };
-    const nuevo = supabaseMock.addTestigo(testigoConActor);
+    const nuevo = supabaseMock.addTestigo(testigoConLider);
     set({ testigos: [nuevo, ...get().testigos] });
   },
 
@@ -243,11 +332,14 @@ export const useElectoralStore = create<ElectoralState>((set, get) => ({
   },
 
   addVotante: (votanteData) => {
-    const votanteConActor = {
+    const { actorId, actorRole } = get();
+    // Un votante debe estar amarrado a un líder
+    const leaderId = actorRole === 'leader' ? actorId : votanteData.leaderId;
+    const votanteConLider = {
       ...votanteData,
-      actor_id: get().actorId ?? undefined,
+      leaderId: leaderId ?? undefined,
     };
-    const nuevo = supabaseMock.addVotante(votanteConActor);
+    const nuevo = supabaseMock.addVotante(votanteConLider);
     set({ votantes: [nuevo, ...get().votantes] });
   },
 
@@ -259,20 +351,24 @@ export const useElectoralStore = create<ElectoralState>((set, get) => ({
   },
 
   addActaE14: (actaData) => {
-    const actaConActor = {
+    const { actorId, actorRole } = get();
+    // Un acta es digitalizada por un líder o testigo (quien tiene actor_id)
+    const leaderId = (actorRole === 'leader' || actorRole === 'witness') ? actorId : actaData.leaderId;
+    const actaConLider = {
       ...actaData,
-      actor_id: get().actorId ?? undefined,
+      leaderId: leaderId ?? undefined,
     };
-    const { acta, nuevaAlerta } = supabaseMock.addActaE14(actaConActor);
-    const nuevasAlertas = nuevaAlerta ? [nuevaAlerta, ...get().alertas] : get().alertas;
+    const acta = supabaseMock.addActaE14(actaConLider);
     set({ 
       actas: [acta, ...get().actas],
-      alertas: nuevasAlertas
     });
   },
 
   resolverAlerta: (id) => {
-    const updated = supabaseMock.resolverAlerta(id);
+    const { actorId, actorRole } = get();
+    const updated = supabaseMock.resolverAlerta(id, {
+      leaderId: (actorRole === 'leader' || actorRole === 'witness') ? actorId ?? undefined : undefined,
+    });
     set({ alertas: updated });
   },
 
@@ -294,6 +390,9 @@ export const useElectoralStore = create<ElectoralState>((set, get) => ({
   reiniciarDatos: () => {
     supabaseMock.resetToDefaults();
     set({
+      partidos: [],
+      candidatos: [],
+      actors: [],
       puestos: supabaseMock.getPuestos(),
       testigos: supabaseMock.getTestigos(),
       votantes: supabaseMock.getVotantes(),

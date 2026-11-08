@@ -77,6 +77,43 @@ export interface Municipio {
   participacionPct: number;
 }
 
+export interface Partido {
+  id: string;
+  nombre: string;
+  siglas: string;
+  color?: string;
+  logoUrl?: string;
+  creadoEn: string;
+}
+
+export interface Candidato {
+  id: string;
+  partidoId: string;
+  nombre: string;
+  apellido?: string;
+  cedula: string;
+  cargo: string; // 'presidente', 'alcalde', 'concejal', etc.
+  departamentoId?: string;
+  municipioId?: string;
+  fotoUrl?: string;
+  creadoEn: string;
+}
+
+export interface Actor {
+  id: string;
+  nombre: string;
+  role: 'totalSupervisor' | 'candidateSupervisor' | 'leader' | 'witness' | 'voter';
+  nivel?: number;
+  candidatoId?: string; // para candidateSupervisor
+  supervisorId?: string; // para leader (a qué supervisor de candidato pertenece)
+  leaderId?: string; // para witness/voter (a qué líder pertenece)
+  scopeLevel?: 'national' | 'department' | 'municipality';
+  scopeId?: string;
+  userId?: string;
+  territorio?: any;
+  creadoEn: string;
+}
+
 export interface TestigoElectoral {
   id: string;
   puestoId: string;
@@ -88,7 +125,7 @@ export interface TestigoElectoral {
   rol: RolTestigo;
   estado: EstadoTestigo;
   horaLlegada?: string;
-  actor_id?: string;
+  leaderId?: string; // amarrado a un líder
 }
 
 export interface VotanteCRM {
@@ -104,7 +141,7 @@ export interface VotanteCRM {
   contactado: boolean;
   necesitaTransporte: boolean;
   yaVoto: boolean;
-  actor_id?: string;
+  leaderId?: string; // amarrado a un líder
 }
 
 export interface ActaE14 {
@@ -123,7 +160,7 @@ export interface ActaE14 {
   totalVotosUrna: number;
   estadoRevision: 'aprobada' | 'alerta_discrepancia' | 'pendiente_verificacion';
   fotoActaUrl?: string;
-  actor_id?: string;
+  leaderId?: string; // quién digitalizó
 }
 
 export interface AlertaFraude {
@@ -136,7 +173,7 @@ export interface AlertaFraude {
   descripcion: string;
   timestamp: string;
   resuelta: boolean;
-  actor_id?: string;
+  leaderId?: string; // quién reportó
 }
 
 export interface FiltrosElectorales {

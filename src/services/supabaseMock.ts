@@ -1,4 +1,13 @@
-import { PuestoVotacion, TestigoElectoral, VotanteCRM, ActaE14, AlertaFraude } from '../types/electoral';
+import {
+  PuestoVotacion,
+  TestigoElectoral,
+  VotanteCRM,
+  ActaE14,
+  AlertaFraude,
+  Partido,
+  Candidato,
+  Actor,
+} from '../types/electoral';
 import {
   PUESTOS_VOTACION,
   TESTIGOS_INICIALES,
@@ -13,6 +22,8 @@ const STORAGE_KEYS = {
   VOTANTES: 'electoapp_tulua_votantes_v1',
   ACTAS: 'electoapp_tulua_actas_v1',
   ALERTAS: 'electoapp_tulua_alertas_v1',
+  PARTIDOS: 'electoapp_tulua_partidos_v1',
+  CANDIDATOS: 'electoapp_tulua_candidatos_v1',
 };
 
 const ACTORS_KEY = 'electoapp_actors_v1';
@@ -150,46 +161,12 @@ class SupabasePostGISMockService {
     return this.getStorage(STORAGE_KEYS.ACTAS, ACTAS_E14_INICIALES);
   }
 
-  addActaE14(acta: Omit<ActaE14, 'id'>): { acta: ActaE14; nuevaAlerta?: AlertaFraude } {
+  addActaE14(acta: Omit<ActaE14, 'id'>): ActaE14 {
     const list = this.getActasE14();
     const nuevo: ActaE14 = { ...acta, id: `acta-e14-${Date.now()}` };
     list.unshift(nuevo);
     this.setStorage(STORAGE_KEYS.ACTAS, list);
-
-    // Fraud detection logic (unchanged)
-    let nuevaAlerta: AlertaFraude | undefined;
-    const totalSuma =
-      acta.votosCoalicion +
-      acta.votosAlianza +
-      acta.votosUnidad +
-      acta.votosOtros +
-      acta.votosBlanco +
-      acta.votosNulos +
-      acta.votosNoMarcados;
-    if (Math.abs(totalSuma - acta.totalVotosUrna) > 5) {
-      nuevaAlerta = this.addAlertaFraude({
-        puestoId: acta.puestoId,
-        puestoNombre: `Puesto ${acta.puestoId}`,
-        mesaNumero: acta.mesaNumero,
-        severidad: 'alta',
-        tipo: 'discrepancia_urna',
-        descripcion: `Discrepancia aritmética: Suma de votos por partido (${totalSuma}) no coincide con el total de votos en urna reportado (${acta.totalVotosUrna}).`,
-        timestamp: new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }),
-        resuelta: false,
-      });
-    } else if (acta.votosNulos > acta.totalVotosUrna * 0.12) {
-      nuevaAlerta = this.addAlertaFraude({
-        puestoId: acta.puestoId,
-        puestoNombre: `Puesto ${acta.puestoId}`,
-        mesaNumero: acta.mesaNumero,
-        severidad: 'alta',
-        tipo: 'nulos_anormales',
-        descripcion: `Porcentaje anómalo de votos nulos detectado: ${acta.votosNulos} votos (${((acta.votosNulos / acta.totalVotosUrna) * 100).toFixed(1)}%). Umbral máximo esperado: 5%.`,
-        timestamp: new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }),
-        resuelta: false,
-      });
-    }
-    return { acta: nuevo, nuevaAlerta };
+    return nuevo;
   }
 
   // ---------------------------------------------------------------------
@@ -207,7 +184,7 @@ class SupabasePostGISMockService {
     return nuevo;
   }
 
-  resolverAlerta(id: string): AlertaFraude[] {
+  resolverAlerta(id: string, metadata?: { leaderId?: string }): AlertaFraude[] {
     const updated = this.getAlertas().map(a => (a.id === id ? { ...a, resuelta: true } : a));
     this.setStorage(STORAGE_KEYS.ALERTAS, updated);
     return updated;
@@ -244,6 +221,46 @@ class SupabasePostGISMockService {
     const filtered = this.getActors().filter(a => a.id !== id);
     this.setStorage(ACTORS_KEY, filtered);
     return filtered;
+  }
+
+  addActor(actor: Actor): Actor[] {
+    const list = this.getActors();
+    const nuevo = { ...actor, id: actor.id ?? `actor-${Date.now()}` };
+    list.unshift(nuevo);
+    this.setStorage(ACTORS_KEY, list);
+    return list;
+  }
+
+  updateActorRole(id: string, updates: Partial<Actor>): Actor[] {
+    const updated = this.getActors().map(a => (a.id === id ? { ...a, ...updates } : a));
+    this.setStorage(ACTORS_KEY, updated);
+    return updated;
+  }
+
+  // Partidos
+  getPartidos(): Partido[] {
+    return this.getStorage(STORAGE_KEYS.PARTIDOS, []);
+  }
+
+  addPartido(partido: Partido): Partido[] {
+    const list = this.getPartidos();
+    const nuevo = { ...partido, id: partido.id ?? `partido-${Date.now()}` };
+    list.unshift(nuevo);
+    this.setStorage(STORAGE_KEYS.PARTIDOS, list);
+    return list;
+  }
+
+  // Candidatos
+  getCandidatos(): Candidato[] {
+    return this.getStorage(STORAGE_KEYS.CANDIDATOS, []);
+  }
+
+  addCandidato(candidato: Candidato): Candidato[] {
+    const list = this.getCandidatos();
+    const nuevo = { ...candidato, id: candidato.id ?? `candidato-${Date.now()}` };
+    list.unshift(nuevo);
+    this.setStorage(STORAGE_KEYS.CANDIDATOS, list);
+    return list;
   }
 
   // ---------------------------------------------------------------------
@@ -286,6 +303,8 @@ class SupabasePostGISMockService {
       votantes: this.getVotantes(),
       actas: this.getActasE14(),
       alertas: this.getAlertas(),
+      partidos: this.getPartidos(),
+      candidatos: this.getCandidatos(),
       actors: this.getActors(),
       users: this.getUsers(),
     };

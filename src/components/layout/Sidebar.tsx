@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useElectoralStore, ModuloActivo } from '../../store/electoralStore';
+import { useSecurityStore } from '../../store/securityStore';
 import { 
   Map, 
   Target, 
@@ -15,9 +16,14 @@ import {
 
 export const Sidebar: React.FC = () => {
   const { moduloActivo, setModuloActivo, puestos, testigos, votantes } = useElectoralStore();
+  const { actorRole } = useElectoralStore();
   const [collapsed, setCollapsed] = useState(false);
 
-  const navItems: Array<{ id: ModuloActivo; label: string; desc: string; icon: React.ReactNode }> = [
+  const isTestigo = actorRole === 'testigo';
+  const isLider = actorRole === 'lider';
+  const isSupervisor = actorRole === 'supervisor_total' || actorRole === 'supervisor_candidato';
+
+  const allNavItems: Array<{ id: ModuloActivo; label: string; desc: string; icon: React.ReactNode }> = [
     {
       id: 'mapa',
       label: 'Visor Cartográfico',
@@ -44,10 +50,29 @@ export const Sidebar: React.FC = () => {
     },
   ];
 
+  // Filtro de módulos por rol
+  let navItems = allNavItems;
+  if (isTestigo) {
+    navItems = allNavItems.filter(i => i.id === 'mapa' || i.id === 'dia_d');
+  } else if (isLider) {
+    navItems = allNavItems.filter(i => i.id !== 'ejecutivo');
+  }
+
+  // Si el módulo activo ya no existe para este rol, resetear a mapa
+  const moduloValido = navItems.some(i => i.id === moduloActivo);
+  const moduloInicial = moduloValido ? moduloActivo : navItems[0]?.id ?? 'mapa';
+
   const totalCenso = puestos.reduce((acc, p) => acc + p.censoElectoral, 0);
   const totalMeta = puestos.reduce((acc, p) => acc + p.metaVotosCampana, 0);
   const votantesFidelizados = votantes.filter(v => v.intencionVoto === 'voto_duro').length;
   const testigosConfirmados = testigos.filter(t => t.estado === 'confirmado').length;
+
+  // Resetear módulo si el rol ya no da acceso a él
+  React.useEffect(() => {
+    if (!moduloValido) {
+      setModuloActivo(moduloInicial);
+    }
+  }, [moduloValido, moduloInicial, setModuloActivo]);
 
   return (
     <aside 

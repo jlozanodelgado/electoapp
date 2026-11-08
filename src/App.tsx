@@ -25,6 +25,7 @@ export const App: React.FC = () => {
   const { moduloActivo, setActorId } = useElectoralStore();
 
   const currentActor = actors.find(a => a.id === currentActorId);
+  const currentActorRole = currentActor?.role ?? null;
 
   useEffect(() => {
     let mounted = true;
@@ -33,12 +34,12 @@ export const App: React.FC = () => {
       if (!mounted) return;
       const actorId = await getCurrentActorId();
       if (mounted && actorId) {
-        setActorId(actorId);
+        setActorId(actorId, currentActorRole);
       }
     };
     init();
     return () => { mounted = false; };
-  }, [loadActors, getCurrentActorId, setActorId]);
+  }, [loadActors, getCurrentActorId, setActorId, currentActorRole]);
 
   return (
       <div className="flex flex-col h-screen w-screen overflow-hidden bg-[#090d16] text-slate-100 select-none">

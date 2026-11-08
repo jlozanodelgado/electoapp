@@ -32,8 +32,12 @@ export const PuestoDrawer: React.FC = () => {
     puestos, 
     testigos, 
     setIsNewWitnessOpen, 
-    setIsDigitalizeE14Open 
+    setIsDigitalizeE14Open,
+    actorRole,
   } = useElectoralStore();
+
+  const isTestigo = actorRole === 'testigo';
+  const isSupervisorOrLider = actorRole === 'supervisor_total' || actorRole === 'supervisor_candidato' || actorRole === 'lider';
 
   const puesto = puestos.find(p => p.id === selectedPuestoId);
   if (!puesto) return null;
@@ -212,22 +216,26 @@ export const PuestoDrawer: React.FC = () => {
 
       {/* Footer Actions */}
       <div className="p-3 border-t border-slate-800/80 bg-slate-900/90 grid grid-cols-2 gap-2">
-        <Button
-          variant="secondary"
-          size="sm"
-          icon={<Users className="w-3.5 h-3.5" />}
-          onClick={() => setIsNewWitnessOpen(true)}
-        >
-          Asignar Testigo
-        </Button>
-        <Button
-          variant="primary"
-          size="sm"
-          icon={<FileSpreadsheet className="w-3.5 h-3.5" />}
-          onClick={() => setIsDigitalizeE14Open(true)}
-        >
-          Digitalizar E-14
-        </Button>
+        {!isTestigo && (
+          <Button
+            variant="secondary"
+            size="sm"
+            icon={<Users className="w-3.5 h-3.5" />}
+            onClick={() => setIsNewWitnessOpen(true)}
+          >
+            Asignar Testigo
+          </Button>
+        )}
+        {isSupervisorOrLider || isTestigo ? (
+          <Button
+            variant="primary"
+            size="sm"
+            icon={<FileSpreadsheet className="w-3.5 h-3.5" />}
+            onClick={() => setIsDigitalizeE14Open(true)}
+          >
+            Digitalizar E-14
+          </Button>
+        ) : null}
       </div>
     </aside>
   );

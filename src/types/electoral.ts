@@ -88,6 +88,7 @@ export interface TestigoElectoral {
   rol: RolTestigo;
   estado: EstadoTestigo;
   horaLlegada?: string;
+  actor_id?: string;
 }
 
 export interface VotanteCRM {
@@ -103,6 +104,7 @@ export interface VotanteCRM {
   contactado: boolean;
   necesitaTransporte: boolean;
   yaVoto: boolean;
+  actor_id?: string;
 }
 
 export interface ActaE14 {
@@ -121,6 +123,7 @@ export interface ActaE14 {
   totalVotosUrna: number;
   estadoRevision: 'aprobada' | 'alerta_discrepancia' | 'pendiente_verificacion';
   fotoActaUrl?: string;
+  actor_id?: string;
 }
 
 export interface AlertaFraude {
@@ -133,6 +136,7 @@ export interface AlertaFraude {
   descripcion: string;
   timestamp: string;
   resuelta: boolean;
+  actor_id?: string;
 }
 
 export interface FiltrosElectorales {

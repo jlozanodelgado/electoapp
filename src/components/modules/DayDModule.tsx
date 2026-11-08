@@ -27,8 +27,21 @@ export const DayDModule: React.FC = () => {
     tickSimulacion,
     setIsDigitalizeE14Open,
     resolverAlerta,
-    setIsFraudModalOpen
+    setIsFraudModalOpen,
+    actorId,
+    actorRole,
   } = useElectoralStore();
+
+  const isTestigo = actorRole === 'testigo';
+
+  // Filtrar actas y alertas propias si es testigo
+  const actasFiltradas = isTestigo && actorId
+    ? actas.filter(a => a.actor_id === actorId)
+    : actas;
+
+  const alertasFiltradas = isTestigo && actorId
+    ? alertas.filter(a => a.actor_id === actorId)
+    : alertas;
 
   // Ticker de simulación en vivo
   useEffect(() => {
@@ -43,18 +56,18 @@ export const DayDModule: React.FC = () => {
 
   // Totales de votos transmitidos a partir de actas registradas
   const totalMesas = puestos.reduce((acc, p) => acc + p.mesasHabilitadas, 0);
-  const totalVotosTransmitidos = actas.reduce((acc, a) => acc + a.totalVotosUrna, 0);
-  const votosCoalicion = actas.reduce((acc, a) => acc + a.votosCoalicion, 0);
-  const votosAlianza = actas.reduce((acc, a) => acc + a.votosAlianza, 0);
-  const votosUnidad = actas.reduce((acc, a) => acc + a.votosUnidad, 0);
-  const votosBlanco = actas.reduce((acc, a) => acc + a.votosBlanco, 0);
-  const votosNulos = actas.reduce((acc, a) => acc + a.votosNulos, 0);
+  const totalVotosTransmitidos = actasFiltradas.reduce((acc, a) => acc + a.totalVotosUrna, 0);
+  const votosCoalicion = actasFiltradas.reduce((acc, a) => acc + a.votosCoalicion, 0);
+  const votosAlianza = actasFiltradas.reduce((acc, a) => acc + a.votosAlianza, 0);
+  const votosUnidad = actasFiltradas.reduce((acc, a) => acc + a.votosUnidad, 0);
+  const votosBlanco = actasFiltradas.reduce((acc, a) => acc + a.votosBlanco, 0);
+  const votosNulos = actasFiltradas.reduce((acc, a) => acc + a.votosNulos, 0);
 
   const pctCoalicion = totalVotosTransmitidos > 0 ? ((votosCoalicion / totalVotosTransmitidos) * 100).toFixed(1) : '0';
   const pctAlianza = totalVotosTransmitidos > 0 ? ((votosAlianza / totalVotosTransmitidos) * 100).toFixed(1) : '0';
   const pctUnidad = totalVotosTransmitidos > 0 ? ((votosUnidad / totalVotosTransmitidos) * 100).toFixed(1) : '0';
 
-  const alertasPendientes = alertas.filter(a => !a.resuelta);
+  const alertasPendientes = alertasFiltradas.filter(a => !a.resuelta);
 
   return (
     <div className="h-[calc(100vh-4rem)] overflow-y-auto p-6 space-y-6 select-none bg-slate-950">
@@ -212,7 +225,7 @@ export const DayDModule: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-          {alertas.map(alerta => (
+          {alertasFiltradas.map(alerta => (
             <div
               key={alerta.id}
               className={`p-4 rounded-xl border transition-all ${
@@ -262,7 +275,7 @@ export const DayDModule: React.FC = () => {
         <div className="p-4 border-b border-slate-800 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <FileSpreadsheet className="w-5 h-5 text-emerald-400" />
-            <h3 className="font-bold text-white text-sm">Actas E-14 Recibidas y Auditadas ({actas.length})</h3>
+            <h3 className="font-bold text-white text-sm">Actas E-14 Recibidas y Auditadas ({actasFiltradas.length})</h3>
           </div>
           <span className="text-xs text-slate-400 font-mono">Protocolo de Auditoría Cero-Papel</span>
         </div>
@@ -283,7 +296,7 @@ export const DayDModule: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60 font-sans">
-              {actas.map(acta => (
+              {actasFiltradas.map(acta => (
                 <tr key={acta.id} className="hover:bg-slate-800/40 transition-colors">
                   <td className="p-3">
                     <p className="font-semibold text-white">Mesa #{acta.mesaNumero}</p>

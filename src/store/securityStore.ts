@@ -63,22 +63,25 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
   login: async (email, password) => {
     const { data: { user }, error } = await getSupabase().auth.signInWithPassword({ email, password });
     if (error) {
-      console.warn('Login failed', error);
+      console.warn('[ElectoApp] Login failed', error);
       return null;
     }
 
+    console.log('[ElectoApp] Auth OK – user id:', user!.id, 'email:', user!.email);
+
     const nombre = (user!.user_metadata?.full_name as string) || email.split('@')[0];
 
-    // Try to fetch an existing actor linked to this user
-    const { data: actorData, error: actorErr } = await getSupabase()
+    // 1) Try to fetch an actor already linked by user_id
+    const { data: actorByUserId, error: err1 } = await getSupabase()
       .from('actors')
       .select('*')
       .eq('user_id', user!.id)
       .single();
 
-    if (!actorErr && actorData) {
-      // Actor found in DB – use it
-      const actor = actorData as Actor;
+    console.log('[ElectoApp] Step 1 – actor by user_id:', actorByUserId, 'error:', err1);
+
+    if (!err1 && actorByUserId) {
+      const actor = actorByUserId as Actor;
       set({
         currentActorId: actor.id,
         actors: [actor, ...get().actors.filter(a => a.id !== actor.id)],
@@ -86,14 +89,52 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
       return user;
     }
 
-    console.warn('No actor found for user, attempting to create one…', actorErr);
+    // 2) user_id not linked yet – try to find by nombre (email prefix)
+    const { data: actorByName, error: err2 } = await getSupabase()
+      .from('actors')
+      .select('*')
+      .eq('nombre', nombre)
+      .single();
 
-    // Try to auto-create an actor in the DB
+    console.log('[ElectoApp] Step 2 – actor by nombre "' + nombre + '":', actorByName, 'error:', err2);
+
+    if (!err2 && actorByName) {
+      const actor = actorByName as Actor;
+      // Link this actor to the auth user for next time
+      await getSupabase().from('actors').update({ user_id: user!.id }).eq('id', actor.id);
+      set({
+        currentActorId: actor.id,
+        actors: [actor, ...get().actors.filter(a => a.id !== actor.id)],
+      });
+      return user;
+    }
+
+    // 3) Fetch ALL actors to see what's in the table
+    const { data: allActors, error: err3 } = await getSupabase()
+      .from('actors')
+      .select('*');
+
+    console.log('[ElectoApp] Step 3 – all actors:', allActors, 'error:', err3);
+
+    if (!err3 && allActors && allActors.length > 0) {
+      // Use the first available actor and link it
+      const actor = allActors[0] as Actor;
+      await getSupabase().from('actors').update({ user_id: user!.id }).eq('id', actor.id);
+      set({
+        currentActorId: actor.id,
+        actors: allActors as Actor[],
+      });
+      return user;
+    }
+
+    // 4) Table empty or inaccessible – insert a new totalSupervisor
     const { data: inserted, error: insErr } = await getSupabase()
       .from('actors')
-      .insert({ nombre, role: 'voter', user_id: user!.id })
+      .insert({ nombre, role: 'totalSupervisor', user_id: user!.id })
       .select('*')
       .single();
+
+    console.log('[ElectoApp] Step 4 – insert:', inserted, 'error:', insErr);
 
     if (!insErr && inserted) {
       const actor = inserted as Actor;
@@ -104,13 +145,12 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
       return user;
     }
 
-    console.warn('Could not create actor in DB, using temporary in-memory actor', insErr);
-
-    // Fallback: create a temporary in-memory actor so the user can still enter
+    // 5) All DB attempts failed – temporary in-memory actor
+    console.warn('[ElectoApp] All DB attempts failed – using temp in-memory actor');
     const tempActor: Actor = {
       id: `temp-${user!.id}`,
       nombre,
-      role: 'voter',
+      role: 'totalSupervisor',
       user_id: user!.id,
     } as Actor;
     set({

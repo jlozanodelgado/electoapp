@@ -32,28 +32,57 @@ export const CampaignCommandModule: React.FC = () => {
     testigos,
     votantes,
     puestos,
+    actors,
+    actorId,
+    actorRole,
     updateTestigoEstado,
     toggleVotanteYaVoto,
     setIsNewWitnessOpen,
     setIsNewVoterOpen,
   } = useElectoralStore();
 
+  const isTestigo = actorRole === 'testigo';
+  const isLider = actorRole === 'leader';
+  const isSupervisorCandidato = actorRole === 'candidateSupervisor';
+  const isSupervisorTotal = actorRole === 'totalSupervisor';
+
+  // Líderes disponibles (para seleccionar al crear testigos/votantes)
+  const lideresDisponibles = actors.filter(a => a.role === 'leader');
+
+  // Líderes amarrados a este supervisor de candidato
+  const misLideres = isSupervisorCandidato && actorId
+    ? lideresDisponibles.filter(l => l.supervisorId === actorId)
+    : lideresDisponibles;
+
+  // Filtrado por jerarquía: líder solo ve sus propios testigos/votantes
+  let testigosConAcceso = testigos;
+  let votantesConAcceso = votantes;
+
+  if (isLider && actorId) {
+    testigosConAcceso = testigos.filter(t => t.leaderId === actorId);
+    votantesConAcceso = votantes.filter(v => v.leaderId === actorId);
+  } else if (isSupervisorCandidato && actorId) {
+    const idsLideres = misLideres.map(l => l.id);
+    testigosConAcceso = testigos.filter(t => idsLideres.includes(t.leaderId ?? ''));
+    votantesConAcceso = votantes.filter(v => idsLideres.includes(v.leaderId ?? ''));
+  }
+
   const totalMesas = puestos.reduce((acc, p) => acc + p.mesasHabilitadas, 0);
-  const testigosConfirmados = testigos.filter(t => t.estado === 'confirmado').length;
-  const testigosPendientes = testigos.filter(t => t.estado === 'pendiente').length;
-  const testigosAusentes = testigos.filter(t => t.estado === 'ausente').length;
+  const testigosConfirmados = testigosConAcceso.filter(t => t.estado === 'confirmado').length;
+  const testigosPendientes = testigosConAcceso.filter(t => t.estado === 'pendiente').length;
+  const testigosAusentes = testigosConAcceso.filter(t => t.estado === 'ausente').length;
   const pctCobertura = totalMesas > 0 ? Math.round((testigosConfirmados / totalMesas) * 100) : 0;
 
   // CRM Votantes KPIs
-  const totalVotantes = votantes.length;
-  const votoDuro = votantes.filter(v => v.intencionVoto === 'voto_duro').length;
-  const votoBlando = votantes.filter(v => v.intencionVoto === 'voto_blando').length;
-  const indecisos = votantes.filter(v => v.intencionVoto === 'indeciso').length;
-  const opositores = votantes.filter(v => v.intencionVoto === 'opositor').length;
-  const yaVotaron = votantes.filter(v => v.yaVoto).length;
+  const totalVotantes = votantesConAcceso.length;
+  const votoDuro = votantesConAcceso.filter(v => v.intencionVoto === 'voto_duro').length;
+  const votoBlando = votantesConAcceso.filter(v => v.intencionVoto === 'voto_blando').length;
+  const indecisos = votantesConAcceso.filter(v => v.intencionVoto === 'indeciso').length;
+  const opositores = votantesConAcceso.filter(v => v.intencionVoto === 'opositor').length;
+  const yaVotaron = votantesConAcceso.filter(v => v.yaVoto).length;
 
   // Filtrado de testigos
-  const testigosFiltrados = testigos.filter(t => {
+  const testigosFiltrados = testigosConAcceso.filter(t => {
     const matchBusqueda = t.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
       t.puestoNombre.toLowerCase().includes(busqueda.toLowerCase()) ||
       t.cedula.includes(busqueda);
@@ -62,7 +91,7 @@ export const CampaignCommandModule: React.FC = () => {
   });
 
   // Filtrado de votantes
-  const votantesFiltrados = votantes.filter(v => {
+  const votantesFiltrados = votantesConAcceso.filter(v => {
     const matchBusqueda = v.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
       v.barrio.toLowerCase().includes(busqueda.toLowerCase()) ||
       v.cedula.includes(busqueda) ||

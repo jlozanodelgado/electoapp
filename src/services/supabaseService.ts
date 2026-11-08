@@ -5,7 +5,10 @@ import {
   TestigoElectoral, 
   VotanteCRM, 
   ActaE14, 
-  AlertaFraude 
+  AlertaFraude,
+  Partido,
+  Candidato,
+  Actor
 } from '../types/electoral';
 
 export class SupabaseService {
@@ -301,6 +304,195 @@ export class SupabaseService {
           .eq('id', id);
       } catch (e) {
         console.warn('Error resolviendo alerta en Supabase:', e);
+      }
+    }
+  }
+
+  // Partidos
+  static async getPartidos(): Promise<Partido[]> {
+    if (!isSupabaseConfigured() || !supabase) {
+      return supabaseMock.getPartidos();
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('partidos')
+        .select('*')
+        .order('nombre');
+
+      if (error || !data) {
+        return supabaseMock.getPartidos();
+      }
+
+      return data.map((p: any) => ({
+        id: p.id,
+        nombre: p.nombre,
+        siglas: p.siglas,
+        color: p.color,
+        logoUrl: p.logo_url,
+        creadoEn: p.creado_en,
+      }));
+    } catch (err) {
+      return supabaseMock.getPartidos();
+    }
+  }
+
+  static async savePartido(partido: Omit<Partido, 'id' | 'creadoEn'>): Promise<Partido> {
+    const nuevoMock = supabaseMock.addPartido(partido as Partido);
+
+    if (isSupabaseConfigured() && supabase) {
+      try {
+        await supabase.from('partidos').insert({
+          id: nuevoMock.id,
+          nombre: partido.nombre,
+          siglas: partido.siglas,
+          color: partido.color,
+          logo_url: partido.logoUrl,
+        });
+      } catch (e) {
+        console.warn('Error guardando partido en Supabase:', e);
+      }
+    }
+
+    return nuevoMock;
+  }
+
+  // Candidatos
+  static async getCandidatos(): Promise<Candidato[]> {
+    if (!isSupabaseConfigured() || !supabase) {
+      return supabaseMock.getCandidatos();
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('candidatos')
+        .select('*')
+        .order('nombre');
+
+      if (error || !data) {
+        return supabaseMock.getCandidatos();
+      }
+
+      return data.map((c: any) => ({
+        id: c.id,
+        partidoId: c.partido_id,
+        nombre: c.nombre,
+        apellido: c.apellido,
+        cedula: c.cedula,
+        cargo: c.cargo,
+        numeroTarjeton: c.numero_tarjeton,
+        departamentoId: c.departamento_id,
+        municipioId: c.municipio_id,
+        fotoUrl: c.foto_url,
+        creadoEn: c.creado_en,
+      }));
+    } catch (err) {
+      return supabaseMock.getCandidatos();
+    }
+  }
+
+  static async saveCandidato(candidato: Omit<Candidato, 'id' | 'creadoEn'>): Promise<Candidato> {
+    const nuevoMock = supabaseMock.addCandidato(candidato as Candidato);
+
+    if (isSupabaseConfigured() && supabase) {
+      try {
+        await supabase.from('candidatos').insert({
+          id: nuevoMock.id,
+          partido_id: candidato.partidoId,
+          nombre: candidato.nombre,
+          apellido: candidato.apellido,
+          cedula: candidato.cedula,
+          cargo: candidato.cargo,
+          numero_tarjeton: candidato.numeroTarjeton,
+          departamento_id: candidato.departamentoId,
+          municipio_id: candidato.municipioId,
+          foto_url: candidato.fotoUrl,
+        });
+      } catch (e) {
+        console.warn('Error guardando candidato en Supabase:', e);
+      }
+    }
+
+    return nuevoMock;
+  }
+
+  // Actores
+  static async getActors(): Promise<Actor[]> {
+    if (!isSupabaseConfigured() || !supabase) {
+      return supabaseMock.getActors();
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('actors')
+        .select('*')
+        .order('creado_en', { ascending: false });
+
+      if (error || !data) {
+        return supabaseMock.getActors();
+      }
+
+      return data.map((a: any) => ({
+        id: a.id,
+        nombre: a.nombre,
+        role: a.role,
+        nivel: a.nivel,
+        candidatoId: a.candidato_id,
+        supervisorId: a.supervisor_id,
+        leaderId: a.leader_id,
+        scopeLevel: a.scope_level,
+        scopeId: a.scope_id,
+        userId: a.user_id,
+        territorio: a.territorio,
+        creadoEn: a.creado_en,
+      }));
+    } catch (err) {
+      return supabaseMock.getActors();
+    }
+  }
+
+  static async saveActor(actor: Omit<Actor, 'id' | 'creadoEn'>): Promise<Actor> {
+    const nuevoMock = supabaseMock.addActor(actor as Actor);
+
+    if (isSupabaseConfigured() && supabase) {
+      try {
+        await supabase.from('actors').insert({
+          id: nuevoMock.id,
+          nombre: actor.nombre,
+          role: actor.role,
+          nivel: actor.nivel,
+          candidato_id: actor.candidatoId,
+          supervisor_id: actor.supervisorId,
+          leader_id: actor.leaderId,
+          scope_level: actor.scopeLevel,
+          scope_id: actor.scopeId,
+          user_id: actor.userId,
+          territorio: actor.territorio,
+        });
+      } catch (e) {
+        console.warn('Error guardando actor en Supabase:', e);
+      }
+    }
+
+    return nuevoMock;
+  }
+
+  static async updateActorRole(id: string, updates: Partial<Actor>): Promise<void> {
+    supabaseMock.updateActorRole(id, updates);
+
+    if (isSupabaseConfigured() && supabase) {
+      try {
+        const updatesDb: any = {};
+        if (updates.role !== undefined) updatesDb.role = updates.role;
+        if (updates.candidatoId !== undefined) updatesDb.candidato_id = updates.candidatoId;
+        if (updates.supervisorId !== undefined) updatesDb.supervisor_id = updates.supervisorId;
+        if (updates.leaderId !== undefined) updatesDb.leader_id = updates.leaderId;
+        if (updates.scopeLevel !== undefined) updatesDb.scope_level = updates.scopeLevel;
+        if (updates.scopeId !== undefined) updatesDb.scope_id = updates.scopeId;
+
+        await supabase.from('actors').update(updatesDb).eq('id', id);
+      } catch (e) {
+        console.warn('Error actualizando actor en Supabase:', e);
       }
     }
   }

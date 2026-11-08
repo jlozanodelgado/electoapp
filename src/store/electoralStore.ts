@@ -14,6 +14,7 @@ import {
 import { Toast, CuadranteTactico, TipoBasemap } from '../types/tactical';
 import { isPointInPolygon } from '../utils/geoUtils';
 import { supabaseMock } from '../services/supabaseMock';
+import { SupabaseService } from '../services/supabaseService';
 
 export type ModuloActivo = 'mapa' | 'campana' | 'candidatos' | 'preparacion' | 'dia_d' | 'ejecutivo';
 
@@ -50,6 +51,7 @@ interface ElectoralState {
   // Estado de activación del Día D (solo totalSupervisor puede activarlo)
   diaDActivado: boolean;
   setDiaDActivado: (activado: boolean) => void;
+  loadHierarchicalData: () => Promise<void>;
 
   // Colecciones de datos jerárquicos
   partidos: Partido[];
@@ -254,28 +256,20 @@ export const useElectoralStore = create<ElectoralState>((set, get) => ({
   setDiaDActivado: (activado) => set({ diaDActivado: activado }),
 
   // Partidos y Candidatos
-  addPartido: (partidoData) => {
-    const nuevo: Partido = {
-      ...partidoData,
-      id: `partido-${Date.now()}`,
-      creadoEn: new Date().toISOString(),
-    };
+  addPartido: async (partidoData) => {
+    const nuevo = await SupabaseService.savePartido(partidoData as Partido);
     set({ partidos: [nuevo, ...get().partidos] });
     return nuevo;
   },
 
-  addCandidato: (candidatoData) => {
-    const nuevo: Candidato = {
-      ...candidatoData,
-      id: `candidato-${Date.now()}`,
-      creadoEn: new Date().toISOString(),
-    };
+  addCandidato: async (candidatoData) => {
+    const nuevo = await SupabaseService.saveCandidato(candidatoData as Candidato);
     set({ candidatos: [nuevo, ...get().candidatos] });
     return nuevo;
   },
 
   // Actores jerárquicos
-  addActor: (actorData) => {
+  addActor: async (actorData) => {
     const { actorRole: creadorRole, actorId: creadorId } = get();
     let supervisorId = actorData.supervisorId;
     let candidatoId = actorData.candidatoId;
@@ -283,36 +277,32 @@ export const useElectoralStore = create<ElectoralState>((set, get) => ({
 
     // Reglas de jerarquía automática según el rol del creador
     if (creadorRole === 'totalSupervisor') {
-      // totalSupervisor crea partidos y candidatos (no actors directamente con supervisor)
       supervisorId = undefined;
       candidatoId = undefined;
     } else if (creadorRole === 'candidateSupervisor') {
-      // candidateSupervisor crea líderes, testigos, votantes amarrados a sí mismo como supervisor
       supervisorId = creadorId ?? undefined;
       candidatoId = actorData.candidatoId ?? get().candidatos.find(c => 
         get().actors.some(a => a.id === creadorId && a.candidatoId === c.id)
       )?.id;
     } else if (creadorRole === 'leader') {
-      // leader crea testigos y votantes amarrados a sí mismo como líder
       leaderId = creadorId ?? undefined;
       supervisorId = undefined;
       candidatoId = undefined;
     }
 
-    const nuevo: Actor = {
+    const nuevo = await SupabaseService.saveActor({
       ...actorData,
-      id: `actor-${Date.now()}`,
       supervisorId,
       candidatoId,
       leaderId,
       nivel: actorData.nivel ?? 0,
-      creadoEn: new Date().toISOString(),
-    };
+    } as Actor);
     set({ actors: [nuevo, ...get().actors] });
     return nuevo;
   },
 
-  updateActorRole: (id, role, supervisorId, candidatoId, leaderId) => {
+  updateActorRole: async (id, role, supervisorId, candidatoId, leaderId) => {
+    await SupabaseService.updateActorRole(id, { role, supervisorId, candidatoId, leaderId } as Partial<Actor>);
     set({
       actors: get().actors.map(a => 
         a.id === id 
@@ -320,6 +310,16 @@ export const useElectoralStore = create<ElectoralState>((set, get) => ({
           : a
       ),
     });
+  },
+
+  // Carga inicial de datos jerárquicos
+  loadHierarchicalData: async () => {
+    const [partidos, candidatos, actors] = await Promise.all([
+      SupabaseService.getPartidos(),
+      SupabaseService.getCandidatos(),
+      SupabaseService.getActors(),
+    ]);
+    set({ partidos, candidatos, actors });
   },
 
   setIsNewWitnessOpen: (open) => set({ isNewWitnessOpen: open }),

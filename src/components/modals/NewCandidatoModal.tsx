@@ -16,8 +16,10 @@ export const NewCandidatoModal: React.FC = () => {
 
   const cargos = [
     { value: 'presidente', label: 'Presidente' },
+    { value: 'gobernacion', label: 'Gobernación' },
     { value: 'alcalde', label: 'Alcalde' },
     { value: 'concejal', label: 'Concejal' },
+    { value: 'asamblea_departamental', label: 'Asamblea Departamental' },
     { value: 'diputado', label: 'Diputado' },
     { value: 'senador', label: 'Senador' },
     { value: 'representante', label: 'Representante a la Cámara' },
@@ -25,9 +27,33 @@ export const NewCandidatoModal: React.FC = () => {
 
   const departamentos = [
     { id: 'valle', nombre: 'Valle del Cauca' },
-    { id: 'cundinamarca', nombre: 'Cundinamarca / Bogotá' },
+    { id: 'cundinamarca', nombre: 'Cundinamarca / Bogotá D.C.' },
     { id: 'antioquia', nombre: 'Antioquia' },
   ];
+
+  const municipiosPorDepartamento: Record<string, { id: string; nombre: string }[]> = {
+    valle: [
+      { id: 'tulua', nombre: 'Tuluá' },
+      { id: 'cali', nombre: 'Cali' },
+      { id: 'buga', nombre: 'Guadalajara de Buga' },
+      { id: 'palmira', nombre: 'Palmira' },
+    ],
+    cundinamarca: [
+      { id: 'bogota', nombre: 'Bogotá D.C.' },
+      { id: 'soacha', nombre: 'Soacha' },
+      { id: 'chía', nombre: 'Chía' },
+    ],
+    antioquia: [
+      { id: 'medellin', nombre: 'Medellín' },
+      { id: 'envigado', nombre: 'Envigado' },
+      { id: 'itaguí', nombre: 'Itagüí' },
+    ],
+  };
+
+  const [municipioId, setMunicipioId] = useState('');
+  const municipiosDisponibles = municipiosPorDepartamento[departamentoId] || [];
+
+  const cargoRequiereMunicipio = cargo === 'concejal' || cargo === 'asamblea_departamental';
 
   useEffect(() => {
     if (partidos.length > 0 && !partidoId) {
@@ -37,11 +63,12 @@ export const NewCandidatoModal: React.FC = () => {
 
   if (!partidos || partidos.length === 0) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!nombre || !cedula || !partidoId) return;
+    if (cargoRequiereMunicipio && !municipioId) return;
 
-    addCandidato({
+    await addCandidato({
       partidoId,
       nombre,
       apellido: apellido || undefined,
@@ -49,6 +76,7 @@ export const NewCandidatoModal: React.FC = () => {
       numeroTarjeton: numeroTarjeton || undefined,
       cargo,
       departamentoId: departamentoId || undefined,
+      municipioId: cargoRequiereMunicipio ? municipioId : undefined,
       fotoUrl: fotoUrl || undefined,
     });
 
@@ -58,6 +86,7 @@ export const NewCandidatoModal: React.FC = () => {
     setCedula('');
     setNumeroTarjeton('');
     setPartidoId(partidos[0].id);
+    setMunicipioId('');
     setFotoUrl('');
   };
 
@@ -170,6 +199,23 @@ export const NewCandidatoModal: React.FC = () => {
               ))}
             </select>
           </div>
+
+          {cargoRequiereMunicipio && (
+            <div>
+              <label className="text-slate-400 block mb-1 font-medium">Municipio (requerido)</label>
+              <select
+                value={municipioId}
+                onChange={(e) => setMunicipioId(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:outline-none focus:border-emerald-500"
+                required
+              >
+                <option value="">Seleccionar municipio</option>
+                {municipiosDisponibles.map((m) => (
+                  <option key={m.id} value={m.id}>{m.nombre}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div>
             <label className="text-slate-400 block mb-1 font-medium">Foto del Candidato (opcional)</label>

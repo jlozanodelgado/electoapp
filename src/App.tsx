@@ -24,7 +24,7 @@ export const App: React.FC = () => {
   const getCurrentActorId = useSecurityStore(state => state.getCurrentActorId);
   const currentActorId = useSecurityStore(state => state.currentActorId);
   const actors = useSecurityStore(state => state.actors);
-  const { moduloActivo, setActorId } = useElectoralStore();
+  const { moduloActivo, setActorId, loadHierarchicalData } = useElectoralStore();
 
   const currentActor = actors.find(a => a.id === currentActorId);
   const currentActorRole = currentActor?.role ?? null;
@@ -33,6 +33,7 @@ export const App: React.FC = () => {
     let mounted = true;
     const init = async () => {
       await loadActors();
+      await loadHierarchicalData();
       if (!mounted) return;
       const actorId = await getCurrentActorId();
       if (mounted && actorId) {

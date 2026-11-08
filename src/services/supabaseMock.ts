@@ -223,12 +223,12 @@ class SupabasePostGISMockService {
     return filtered;
   }
 
-  addActor(actor: Actor): Actor[] {
+  addActor(actor: Actor): Actor {
     const list = this.getActors();
     const nuevo = { ...actor, id: actor.id ?? `actor-${Date.now()}` };
     list.unshift(nuevo);
     this.setStorage(ACTORS_KEY, list);
-    return list;
+    return nuevo;
   }
 
   updateActorRole(id: string, updates: Partial<Actor>): Actor[] {
@@ -242,12 +242,12 @@ class SupabasePostGISMockService {
     return this.getStorage(STORAGE_KEYS.PARTIDOS, []);
   }
 
-  addPartido(partido: Partido): Partido[] {
+  addPartido(partido: Partido): Partido {
     const list = this.getPartidos();
     const nuevo = { ...partido, id: partido.id ?? `partido-${Date.now()}` };
     list.unshift(nuevo);
     this.setStorage(STORAGE_KEYS.PARTIDOS, list);
-    return list;
+    return nuevo;
   }
 
   // Candidatos
@@ -255,12 +255,12 @@ class SupabasePostGISMockService {
     return this.getStorage(STORAGE_KEYS.CANDIDATOS, []);
   }
 
-  addCandidato(candidato: Candidato): Candidato[] {
+  addCandidato(candidato: Candidato): Candidato {
     const list = this.getCandidatos();
     const nuevo = { ...candidato, id: candidato.id ?? `candidato-${Date.now()}` };
     list.unshift(nuevo);
     this.setStorage(STORAGE_KEYS.CANDIDATOS, list);
-    return list;
+    return nuevo;
   }
 
   // ---------------------------------------------------------------------

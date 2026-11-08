@@ -10,6 +10,25 @@ export const CandidatosModule: React.FC = () => {
   const { candidatos, partidos, actorRole, actorId } = useElectoralStore();
   const [busqueda, setBusqueda] = useState('');
 
+  const municipios: Record<string, string> = {
+    tulua: 'Tuluá',
+    cali: 'Cali',
+    buga: 'Guadalajara de Buga',
+    palmira: 'Palmira',
+    bogota: 'Bogotá D.C.',
+    soacha: 'Soacha',
+    chia: 'Chía',
+    medellin: 'Medellín',
+    envigado: 'Envigado',
+    itagui: 'Itagüí',
+  };
+
+  const departamentos: Record<string, string> = {
+    valle: 'Valle del Cauca',
+    cundinamarca: 'Cundinamarca / Bogotá D.C.',
+    antioquia: 'Antioquia',
+  };
+
   const candidatosFiltrados = candidatos.filter((c) => {
     const partido = partidos.find((p) => p.id === c.partidoId);
     return (
@@ -23,12 +42,16 @@ export const CandidatosModule: React.FC = () => {
 
   const cargoLabels: Record<string, string> = {
     presidente: 'Presidente',
+    gobernacion: 'Gobernación',
     alcalde: 'Alcalde',
     concejal: 'Concejal',
+    asamblea_departamental: 'Asamblea Departamental',
     diputado: 'Diputado',
     senador: 'Senador',
     representante: 'Representante',
   };
+
+  const cargoRequiresMunicipio = (cargo: string) => cargo === 'concejal' || cargo === 'asamblea_departamental';
 
   return (
     <div className="h-[calc(100vh-4rem)] overflow-y-auto p-6 space-y-6 select-none bg-slate-950">
@@ -106,7 +129,8 @@ export const CandidatosModule: React.FC = () => {
                 <th className="p-3">Partido</th>
                 <th className="p-3 text-center">Tarjetón</th>
                 <th className="p-3 text-center">Cargo</th>
-                <th className="p-3">Territorio</th>
+                <th className="p-3">Departamento</th>
+                <th className="p-3">Municipio</th>
                 <th className="p-3 text-right">Acciones</th>
               </tr>
             </thead>
@@ -157,14 +181,14 @@ export const CandidatosModule: React.FC = () => {
                       </span>
                     </td>
                     <td className="p-3">
-                      <span className="text-[10px] text-slate-400 font-mono">
-                        {c.departamentoId ?? 'Nacional'}
+                      <span className="text-slate-300 text-xs capitalize">
+                        {c.departamentoId ? departamentos[c.departamentoId] : 'Nacional'}
                       </span>
-                      {c.municipioId && (
-                        <span className="text-[10px] text-slate-500 block">
-                          {c.municipioId}
-                        </span>
-                      )}
+                    </td>
+                    <td className="p-3">
+                      <span className={`text-[10px] font-mono ${c.municipioId ? 'text-slate-300' : 'text-slate-500'}`}>
+                        {c.municipioId ? municipios[c.municipioId] : (cargoRequiresMunicipio(c.cargo) ? 'Requerido' : '—')}
+                      </span>
                     </td>
                     <td className="p-3 text-right">
                       <Badge variant="blue" size="sm">
@@ -176,7 +200,7 @@ export const CandidatosModule: React.FC = () => {
               })}
               {candidatosFiltrados.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="p-6 text-center text-slate-500 text-xs">
+                  <td colSpan={8} className="p-6 text-center text-slate-500 text-xs">
                     No se encontraron candidatos.
                   </td>
                 </tr>

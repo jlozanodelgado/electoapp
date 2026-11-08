@@ -1,0 +1,110 @@
+import React, { useState } from 'react';
+import { useElectoralStore } from '../../store/electoralStore';
+import { Button } from '../ui/Button';
+import { X, Flag, Building } from 'lucide-react';
+
+export const NewPartidoModal: React.FC = () => {
+  const { isNewWitnessOpen, setIsNewWitnessOpen } = useElectoralStore();
+  const [nombre, setNombre] = useState('');
+  const [siglas, setSiglas] = useState('');
+  const [color, setColor] = useState('#6366f1');
+
+  const colores = [
+    { value: '#10b981', label: 'Esmeralda' },
+    { value: '#3b82f6', label: 'Azul' },
+    { value: '#ef4444', label: 'Rojo' },
+    { value: '#f59e0b', label: 'Ámbar' },
+    { value: '#8b5cf6', label: 'Púrpura' },
+  ];
+
+  if (!isNewWitnessOpen) return null;
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!nombre || !siglas) return;
+
+    // Nota: este modal se reusa como "Nuevo Partido" pero el store usa isNewWitnessOpen
+    // En un futuro se debería separar el estado del modal
+  };
+
+  return (
+    <div className="fixed inset-0 z-[2000] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden select-none">
+        <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/60">
+          <div className="flex items-center gap-2">
+            <Flag className="w-5 h-5 text-emerald-400" />
+            <h3 className="font-bold text-white text-sm">Crear Partido Político</h3>
+          </div>
+          <button
+            onClick={() => setIsNewWitnessOpen(false)}
+            className="text-slate-400 hover:text-white"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <form className="p-4 space-y-3.5 text-xs">
+          <div>
+            <label className="text-slate-400 block mb-1 font-medium">Nombre del Partido</label>
+            <input
+              type="text"
+              placeholder="Ej. Coalición Por el Cambio"
+              value={nombre}
+              onChange={(e) => setNombre(e.target.value)}
+              className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:outline-none focus:border-emerald-500"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="text-slate-400 block mb-1 font-medium">Siglas</label>
+            <input
+              type="text"
+              placeholder="Ej. CPC"
+              maxLength="10"
+              value={siglas}
+              onChange={(e) => setSiglas(e.target.value.toUpperCase())}
+              className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 font-mono font-bold focus:outline-none focus:border-emerald-500"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="text-slate-400 block mb-1 font-medium">Color Identitario</label>
+            <div className="flex gap-2">
+              {colores.map(c => (
+                <button
+                  key={c.value}
+                  type="button"
+                  onClick={() => setColor(c.value)}
+                  className={`w-8 h-8 rounded-full border-2 cursor-pointer ${color === c.value ? 'ring-2 ring-emerald-400' : 'ring-transparent'} bg-[${c.value}] border-slate-700`}
+                  title={c.label}
+                />
+              ))}
+            </div>
+          </div>
+
+          <div className="pt-3 border-t border-slate-800 flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setIsNewWitnessOpen(false)}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              size="sm"
+              icon={<Flag className="w-4 h-4" />}
+              disabled={!nombre || !siglas}
+            >
+              Crear Partido
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};

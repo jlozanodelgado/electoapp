@@ -63,6 +63,8 @@ interface ElectoralState {
   // Modales
   isNewWitnessOpen: boolean;
   isNewVoterOpen: boolean;
+  isNewPartidoOpen: boolean;
+  isNewCandidatoOpen: boolean;
   isDigitalizeE14Open: boolean;
   isFraudModalOpen: boolean;
   alertaSeleccionada: AlertaFraude | null;
@@ -90,6 +92,8 @@ interface ElectoralState {
   // Modales
   setIsNewWitnessOpen: (open: boolean) => void;
   setIsNewVoterOpen: (open: boolean) => void;
+  setIsNewPartidoOpen: (open: boolean) => void;
+  setIsNewCandidatoOpen: (open: boolean) => void;
   setIsDigitalizeE14Open: (open: boolean) => void;
   setIsFraudModalOpen: (open: boolean, alerta?: AlertaFraude | null) => void;
 
@@ -154,6 +158,8 @@ export const useElectoralStore = create<ElectoralState>((set, get) => ({
 
   isNewWitnessOpen: false,
   isNewVoterOpen: false,
+  isNewPartidoOpen: false,
+  isNewCandidatoOpen: false,
   isDigitalizeE14Open: false,
   isFraudModalOpen: false,
   alertaSeleccionada: null,
@@ -311,6 +317,8 @@ export const useElectoralStore = create<ElectoralState>((set, get) => ({
 
   setIsNewWitnessOpen: (open) => set({ isNewWitnessOpen: open }),
   setIsNewVoterOpen: (open) => set({ isNewVoterOpen: open }),
+  setIsNewPartidoOpen: (open: boolean) => set({ isNewPartidoOpen: open }),
+  setIsNewCandidatoOpen: (open: boolean) => set({ isNewCandidatoOpen: open }),
   setIsDigitalizeE14Open: (open) => set({ isDigitalizeE14Open: open }),
   setIsFraudModalOpen: (open, alerta = null) => set({ isFraudModalOpen: open, alertaSeleccionada: alerta }),
 

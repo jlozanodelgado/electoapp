@@ -4,7 +4,7 @@ import { Button } from '../ui/Button';
 import { X, User, Building } from 'lucide-react';
 
 export const NewCandidatoModal: React.FC = () => {
-  const { candidatos, partidos, addCandidato, setIsNewWitnessOpen } = useElectoralStore();
+  const { candidatos, partidos, addCandidato, setIsNewCandidatoOpen } = useElectoralStore();
   const [partidoId, setPartidoId] = useState('');
   const [nombre, setNombre] = useState('');
   const [apellido, setApellido] = useState('');
@@ -48,7 +48,7 @@ export const NewCandidatoModal: React.FC = () => {
       departamentoId: departamentoId || undefined,
     });
 
-    setIsNewWitnessOpen(false);
+    setIsNewCandidatoOpen(false);
     setNombre('');
     setApellido('');
     setCedula('');
@@ -64,7 +64,7 @@ export const NewCandidatoModal: React.FC = () => {
             <h3 className="font-bold text-white text-sm">Registrar Candidato</h3>
           </div>
           <button
-            onClick={() => setIsNewWitnessOpen(false)}
+            onClick={() => setIsNewCandidatoOpen(false)}
             className="text-slate-400 hover:text-white"
           >
             <X className="w-4 h-4" />
@@ -157,7 +157,7 @@ export const NewCandidatoModal: React.FC = () => {
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => setIsNewWitnessOpen(false)}
+              onClick={() => setIsNewCandidatoOpen(false)}
             >
               Cancelar
             </Button>
@@ -167,6 +167,7 @@ export const NewCandidatoModal: React.FC = () => {
               size="sm"
               icon={<Building className="w-4 h-4" />}
               disabled={!nombre || !cedula || !partidoId}
+              onClick={handleSubmit}
             >
               Registrar Candidato
             </Button>

@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { useElectoralStore } from '../../store/electoralStore';
 import { Button } from '../ui/Button';
-import { X, Flag, Building } from 'lucide-react';
+import { X, Flag } from 'lucide-react';
 
 export const NewPartidoModal: React.FC = () => {
-  const { isNewWitnessOpen, setIsNewWitnessOpen } = useElectoralStore();
+  const { isNewPartidoOpen, setIsNewPartidoOpen, addPartido } = useElectoralStore();
   const [nombre, setNombre] = useState('');
   const [siglas, setSiglas] = useState('');
-  const [color, setColor] = useState('#6366f1');
+  const [color, setColor] = useState('#10b981');
 
   const colores = [
     { value: '#10b981', label: 'Esmeralda' },
@@ -17,14 +17,17 @@ export const NewPartidoModal: React.FC = () => {
     { value: '#8b5cf6', label: 'Púrpura' },
   ];
 
-  if (!isNewWitnessOpen) return null;
+  if (!isNewPartidoOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!nombre || !siglas) return;
 
-    // Nota: este modal se reusa como "Nuevo Partido" pero el store usa isNewWitnessOpen
-    // En un futuro se debería separar el estado del modal
+    addPartido({ nombre, siglas, color });
+    setIsNewPartidoOpen(false);
+    setNombre('');
+    setSiglas('');
+    setColor('#10b981');
   };
 
   return (
@@ -36,7 +39,7 @@ export const NewPartidoModal: React.FC = () => {
             <h3 className="font-bold text-white text-sm">Crear Partido Político</h3>
           </div>
           <button
-            onClick={() => setIsNewWitnessOpen(false)}
+            onClick={() => setIsNewPartidoOpen(false)}
             className="text-slate-400 hover:text-white"
           >
             <X className="w-4 h-4" />
@@ -89,7 +92,7 @@ export const NewPartidoModal: React.FC = () => {
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => setIsNewWitnessOpen(false)}
+              onClick={() => setIsNewPartidoOpen(false)}
             >
               Cancelar
             </Button>
@@ -99,6 +102,7 @@ export const NewPartidoModal: React.FC = () => {
               size="sm"
               icon={<Flag className="w-4 h-4" />}
               disabled={!nombre || !siglas}
+              onClick={handleSubmit}
             >
               Crear Partido
             </Button>

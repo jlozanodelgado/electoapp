@@ -7,7 +7,7 @@ import type { User } from '@supabase/supabase-js';
 
 // Helper to normalize an actor coming from PostgreSQL
 function normalizeActor(raw: any): Actor {
-  const rawRol = String(raw.rol || raw.role || '').toLowerCase();
+  const rawRol = String(raw.role || raw.rol || '').toLowerCase();
   
   let role: Actor['role'] = 'voter';
   if (rawRol.includes('supervisor_total') || rawRol.includes('totalsupervisor') || raw.nivel === 0) {
@@ -102,6 +102,7 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
     const dbPayload = {
       nombre: actor.nombre,
       rol: rolDb,
+      role: rolDb,
       nivel,
       user_id: actor.user_id || null,
       scope_level: actor.scopeLevel || null,

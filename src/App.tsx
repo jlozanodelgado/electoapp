@@ -39,9 +39,11 @@ export const App: React.FC = () => {
       ) : (
         <>
           {/* Navbar Superior */}
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center px-4 bg-slate-950 border-b border-slate-800">
             <ActorSwitcher />
-            <Navbar />
+            <div className="flex-1">
+              <Navbar />
+            </div>
           </div>
 
           {/* Cuerpo Principal */}

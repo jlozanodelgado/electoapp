@@ -11,7 +11,8 @@ import {
   TrendingUp,
   FileCheck2,
   Users2,
-  CheckCircle2
+  CheckCircle2,
+  Clock
 } from 'lucide-react';
 
 export const Sidebar: React.FC = () => {
@@ -20,7 +21,7 @@ export const Sidebar: React.FC = () => {
   const [collapsed, setCollapsed] = useState(false);
 
   const isTestigo = actorRole === 'testigo';
-  const isLider = actorRole === 'lider';
+  const isLider = actorRole === 'leader';
   const isSupervisor = actorRole === 'supervisor_total' || actorRole === 'supervisor_candidato';
 
   const allNavItems: Array<{ id: ModuloActivo; label: string; desc: string; icon: React.ReactNode }> = [
@@ -35,6 +36,12 @@ export const Sidebar: React.FC = () => {
       label: 'Comando de Campaña',
       desc: 'CRM Votantes y Testigos',
       icon: <Target className="w-5 h-5" />,
+    },
+    {
+      id: 'preparacion',
+      label: 'Preparación Día D',
+      desc: 'Líderes, Testigos y Planificación',
+      icon: <Clock className="w-5 h-5" />,
     },
     {
       id: 'dia_d',

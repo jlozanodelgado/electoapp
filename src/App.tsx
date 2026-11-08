@@ -8,6 +8,7 @@ import { DayDModule } from './components/modules/DayDModule';
 import { ExecutiveDashboardModule } from './components/modules/ExecutiveDashboardModule';
 import { NewWitnessModal } from './components/modals/NewWitnessModal';
 import { NewVoterModal } from './components/modals/NewVoterModal';
+import { PreparacionModule } from './components/modules/PreparacionModule';
 import { DigitalizeE14Modal } from './components/modals/DigitalizeE14Modal';
 import { FraudAlertModal } from './components/modals/FraudAlertModal';
 import { ToastContainer } from './components/ui/ToastContainer';
@@ -68,6 +69,7 @@ export const App: React.FC = () => {
             <main className="flex-1 relative overflow-hidden bg-slate-950">
               {moduloActivo === 'mapa' && <MapViewerModule />}
               {moduloActivo === 'campana' && <CampaignCommandModule />}
+              {moduloActivo === 'preparacion' && <PreparacionModule />}
               {moduloActivo === 'dia_d' && <DayDModule />}
               {moduloActivo === 'ejecutivo' && <ExecutiveDashboardModule />}
             </main>

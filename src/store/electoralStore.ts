@@ -15,7 +15,7 @@ import { Toast, CuadranteTactico, TipoBasemap } from '../types/tactical';
 import { isPointInPolygon } from '../utils/geoUtils';
 import { supabaseMock } from '../services/supabaseMock';
 
-export type ModuloActivo = 'mapa' | 'campana' | 'dia_d' | 'ejecutivo';
+export type ModuloActivo = 'mapa' | 'campana' | 'preparacion' | 'dia_d' | 'ejecutivo';
 
 interface ElectoralState {
   moduloActivo: ModuloActivo;
@@ -46,6 +46,10 @@ interface ElectoralState {
   actorId: string | null;
   actorRole: string | null;
   setActorId: (id: string | null, role?: string | null) => void;
+
+  // Estado de activación del Día D (solo totalSupervisor puede activarlo)
+  diaDActivado: boolean;
+  setDiaDActivado: (activado: boolean) => void;
 
   // Colecciones de datos jerárquicos
   partidos: Partido[];
@@ -145,6 +149,7 @@ export const useElectoralStore = create<ElectoralState>((set, get) => ({
   drawerAbierto: false,
   actorId: null,
   actorRole: null,
+  diaDActivado: false,
 
   partidos: [],
   candidatos: [],
@@ -245,6 +250,8 @@ export const useElectoralStore = create<ElectoralState>((set, get) => ({
 
   setDrawerAbierto: (abierto) => set({ drawerAbierto: abierto }),
   setActorId: (id, role = null) => set({ actorId: id, actorRole: role }),
+
+  setDiaDActivado: (activado) => set({ diaDActivado: activado }),
 
   // Partidos y Candidatos
   addPartido: (partidoData) => {

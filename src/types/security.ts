@@ -21,26 +21,22 @@ export type ScopeLevel = "national" | "department" | "municipality";
 export interface BaseActor {
   id: string;
   nombre: string;
+  role: "totalSupervisor" | "candidateSupervisor" | "leader" | "witness" | "voter";
+  rol?: string;
+  nivel?: number;
   // The candidate this actor is linked to (if any). For the "total supervisor"
   // this can be undefined because they oversee the whole system.
   candidatoId?: string;
+  candidato_id?: string;
   // Optional generic fields used by some actors – they are not required for every role.
   scopeLevel?: ScopeLevel;   // e.g., "national", "department", "municipality"
+  scope_level?: ScopeLevel;
   scopeId?: string;          // identifier for department/municipality when needed
+  scope_id?: string;
   leaderId?: string;         // reference to a leader when the actor is a witness or voter
+  leader_id?: string;
   // Link to Supabase Auth user (optional, added for real DB integration)
   user_id?: string;
-}
-
-  id: string;
-  nombre: string;
-  // The candidate this actor is linked to (if any). For the "total supervisor"
-  // this can be undefined because they oversee the whole system.
-  candidatoId?: string;
-  // Optional generic fields used by some actors – they are not required for every role.
-  scopeLevel?: ScopeLevel;   // e.g., "national", "department", "municipality"
-  scopeId?: string;          // identifier for department/municipality when needed
-  leaderId?: string;         // reference to a leader when the actor is a witness or voter
 }
 
 

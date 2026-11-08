@@ -5,6 +5,24 @@ import { Actor } from '../types/security';
 import { getSupabase } from '../services/getSupabase';
 import type { User } from '@supabase/supabase-js';
 
+// Helper to normalize an actor coming from PostgreSQL
+function normalizeActor(raw: any): Actor {
+  const role =
+    raw.role ||
+    raw.rol ||
+    (raw.nivel === 0 ? 'totalSupervisor' : raw.nivel === 1 ? 'candidateSupervisor' : raw.nivel === 2 ? 'leader' : raw.nivel === 3 ? 'witness' : 'voter');
+
+  return {
+    ...raw,
+    role,
+    candidatoId: raw.candidatoId ?? raw.candidato_id,
+    scopeLevel: raw.scopeLevel ?? raw.scope_level,
+    scopeId: raw.scopeId ?? raw.scope_id,
+    leaderId: raw.leaderId ?? raw.leader_id,
+    user_id: raw.user_id,
+  } as Actor;
+}
+
 interface SecurityState {
   actors: Actor[];
   currentActorId: string | null;
@@ -34,26 +52,37 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
       set({ actors: [] });
       return;
     }
-    set({ actors: (data as Actor[]) ?? [] });
+    const normalized = (data || []).map(normalizeActor);
+    set({ actors: normalized });
   },
   createActor: async (actor) => {
-    const { error } = await getSupabase().from('actors').insert(actor);
+    const dbPayload = {
+      nombre: actor.nombre,
+      rol: actor.role,
+      nivel: actor.role === 'totalSupervisor' ? 0 : 4,
+      user_id: actor.user_id,
+      scope_level: actor.scopeLevel,
+      scope_id: actor.scopeId,
+      candidato_id: actor.candidatoId,
+      leader_id: actor.leaderId,
+    };
+    const { error } = await getSupabase().from('actors').insert(dbPayload);
     if (error) console.warn('Create actor error', error);
     // Refresh list
     const { data } = await getSupabase().from('actors').select('*');
-    set({ actors: (data as Actor[]) ?? [] });
+    set({ actors: (data || []).map(normalizeActor) });
   },
   updateActor: async (id, updates) => {
     const { error } = await getSupabase().from('actors').update(updates).eq('id', id);
     if (error) console.warn('Update actor error', error);
     const { data } = await getSupabase().from('actors').select('*');
-    set({ actors: (data as Actor[]) ?? [] });
+    set({ actors: (data || []).map(normalizeActor) });
   },
   deleteActor: async (id) => {
     const { error } = await getSupabase().from('actors').delete().eq('id', id);
     if (error) console.warn('Delete actor error', error);
     const { data } = await getSupabase().from('actors').select('*');
-    set({ actors: (data as Actor[]) ?? [] });
+    set({ actors: (data || []).map(normalizeActor) });
   },
   currentActor: () => {
     const { actors, currentActorId } = get();
@@ -71,17 +100,17 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
 
     const nombre = (user!.user_metadata?.full_name as string) || email.split('@')[0];
 
-    // 1) Try to fetch an actor already linked by user_id
+    // 1) Intentar obtener actor vinculado por user_id
     const { data: actorByUserId, error: err1 } = await getSupabase()
       .from('actors')
       .select('*')
       .eq('user_id', user!.id)
-      .single();
+      .maybeSingle();
 
     console.log('[ElectoApp] Step 1 – actor by user_id:', actorByUserId, 'error:', err1);
 
     if (!err1 && actorByUserId) {
-      const actor = actorByUserId as Actor;
+      const actor = normalizeActor(actorByUserId);
       set({
         currentActorId: actor.id,
         actors: [actor, ...get().actors.filter(a => a.id !== actor.id)],
@@ -89,19 +118,20 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
       return user;
     }
 
-    // 2) user_id not linked yet – try to find by nombre (email prefix)
+    // 2) user_id no vinculado todavía: intentar buscar por nombre
     const { data: actorByName, error: err2 } = await getSupabase()
       .from('actors')
       .select('*')
-      .eq('nombre', nombre)
-      .single();
+      .ilike('nombre', `%${nombre}%`)
+      .maybeSingle();
 
     console.log('[ElectoApp] Step 2 – actor by nombre "' + nombre + '":', actorByName, 'error:', err2);
 
     if (!err2 && actorByName) {
-      const actor = actorByName as Actor;
-      // Link this actor to the auth user for next time
+      const actor = normalizeActor(actorByName);
+      // Vincular este actor al auth user_id en la BD
       await getSupabase().from('actors').update({ user_id: user!.id }).eq('id', actor.id);
+      actor.user_id = user!.id;
       set({
         currentActorId: actor.id,
         actors: [actor, ...get().actors.filter(a => a.id !== actor.id)],
@@ -109,35 +139,51 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
       return user;
     }
 
-    // 3) Fetch ALL actors to see what's in the table
+    // 3) Consultar TODOS los actores de la tabla
     const { data: allActors, error: err3 } = await getSupabase()
       .from('actors')
       .select('*');
 
-    console.log('[ElectoApp] Step 3 – all actors:', allActors, 'error:', err3);
+    console.log('[ElectoApp] Step 3 – all actors in DB:', allActors, 'error:', err3);
 
     if (!err3 && allActors && allActors.length > 0) {
-      // Use the first available actor and link it
-      const actor = allActors[0] as Actor;
+      // Priorizar vincular con uno que sea supervisor si existe, o el primero
+      const supervisorActor = allActors.find((a: any) =>
+        String(a.rol).toLowerCase().includes('super') || a.nivel === 0
+      ) || allActors[0];
+
+      const actor = normalizeActor(supervisorActor);
       await getSupabase().from('actors').update({ user_id: user!.id }).eq('id', actor.id);
+      actor.user_id = user!.id;
+
+      const normalizedList = allActors.map(normalizeActor);
       set({
         currentActorId: actor.id,
-        actors: allActors as Actor[],
+        actors: normalizedList,
       });
       return user;
     }
 
-    // 4) Table empty or inaccessible – insert a new totalSupervisor
+    // 4) Si la tabla estuviese vacía o sin registros vinculables, insertar respetando el esquema SQL
+    // rol es USER-DEFINED o text, nivel es integer NOT NULL
+    const newActorPayload = {
+      nombre,
+      rol: 'totalSupervisor',
+      nivel: 0,
+      user_id: user!.id,
+      scope_level: 'national',
+    };
+
     const { data: inserted, error: insErr } = await getSupabase()
       .from('actors')
-      .insert({ nombre, role: 'totalSupervisor', user_id: user!.id })
+      .insert(newActorPayload)
       .select('*')
       .single();
 
-    console.log('[ElectoApp] Step 4 – insert:', inserted, 'error:', insErr);
+    console.log('[ElectoApp] Step 4 – insert actor:', inserted, 'error:', insErr);
 
     if (!insErr && inserted) {
-      const actor = inserted as Actor;
+      const actor = normalizeActor(inserted);
       set({
         currentActorId: actor.id,
         actors: [actor, ...get().actors],
@@ -145,13 +191,14 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
       return user;
     }
 
-    // 5) All DB attempts failed – temporary in-memory actor
-    console.warn('[ElectoApp] All DB attempts failed – using temp in-memory actor');
+    // 5) Fallback en memoria si RLS bloquea escrituras/lecturas
+    console.warn('[ElectoApp] Fallback – usando actor en memoria totalSupervisor');
     const tempActor: Actor = {
       id: `temp-${user!.id}`,
       nombre,
       role: 'totalSupervisor',
       user_id: user!.id,
+      scopeLevel: 'national',
     } as Actor;
     set({
       currentActorId: tempActor.id,
@@ -164,33 +211,36 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
     const { data: { user }, error } = await getSupabase().auth.signUp({ email, password });
     if (error) throw error;
     const nombre = email.split('@')[0];
-    const actor: Omit<Actor, 'id'> = { nombre, role, user_id: user!.id } as any;
-    const { error: actErr } = await getSupabase().from('actors').insert(actor);
+    const actorPayload = {
+      nombre,
+      rol: role,
+      nivel: role === 'totalSupervisor' ? 0 : 4,
+      user_id: user!.id,
+    };
+    const { error: actErr } = await getSupabase().from('actors').insert(actorPayload);
     if (actErr) console.warn('Actor insert after registration failed', actErr);
     // Refresh actors list
     const { data } = await getSupabase().from('actors').select('*');
-    set({ actors: (data as Actor[]) ?? [] });
+    set({ actors: (data || []).map(normalizeActor) });
     return user!;
   },
   exportAll: async () => {
     // Direct fetch of all relevant tables (fallback implementation)
-    const [{ data: actores }, { data: puestos }, { data: testigos }, { data: votantes }, { data: actas }, { data: alertas }, { data: usuarios }] = await Promise.all([
+    const [{ data: actores }, { data: puestos }, { data: testigos }, { data: votantes }, { data: actas }, { data: alertas }] = await Promise.all([
       getSupabase().from('actors').select('*'),
-      getSupabase().from('puestos').select('*'),
-      getSupabase().from('testigos').select('*'),
-      getSupabase().from('votantes').select('*'),
-      getSupabase().from('actas').select('*'),
-      getSupabase().from('alertas').select('*'),
-      getSupabase().from('users').select('*'),
+      getSupabase().from('puestos_votacion').select('*'),
+      getSupabase().from('testigos_electorales').select('*'),
+      getSupabase().from('votantes_crm').select('*'),
+      getSupabase().from('actas_e14').select('*'),
+      getSupabase().from('alertas_fraude').select('*'),
     ]);
     const full = {
       actors: actores,
-      puestos,
-      testigos,
-      votantes,
-      actas,
-      alertas,
-      users: usuarios,
+      puestos_votacion: puestos,
+      testigos_electorales: testigos,
+      votantes_crm: votantes,
+      actas_e14: actas,
+      alertas_fraude: alertas,
     };
     return JSON.stringify(full, null, 2);
   },

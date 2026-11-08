@@ -17,16 +17,11 @@ const STORAGE_KEYS = {
 
 const ACTORS_KEY = 'electoapp_actors_v1';
 
-// ---------------------------------------
-// Users – simple username/password mock auth
-// ---------------------------------------
-
 const USERS_KEY = 'electoapp_users_v1';
 
 export interface User {
   id: string;
   username: string;
-  // Plain‑text password – ONLY for demo/mock purposes!
   password: string;
   role: 'totalSupervisor' | 'candidateSupervisor' | 'leader' | 'witness' | 'voter';
 }
@@ -50,17 +45,30 @@ async function findUser(username: string): Promise<User | null> {
 }
 
 class SupabasePostGISMockService {
-  // ---- existing generic storage helpers (unchanged) ----
-  // ...
+  // Generic localStorage helpers
+  getStorage<T>(key: string, defaultData: T): T {
+    try {
+      const saved = localStorage.getItem(key);
+      if (saved) return JSON.parse(saved) as T;
+    } catch (e) {
+      console.warn('LocalStorage read error for', key, e);
+    }
+    return defaultData;
+  }
 
-  // ---------------------------------------------------------------------
+  setStorage<T>(key: string, data: T): void {
+    try {
+      localStorage.setItem(key, JSON.stringify(data));
+    } catch (e) {
+      console.warn('LocalStorage write error for', key, e);
+    }
+  }
+
   // Users – authentication mock
-  // ---------------------------------------------------------------------
   getUsers(): User[] {
     return getStoredUsers();
   }
 
-  // Register a new user (plain‑text password – NOT for production)
   registerUser(username: string, password: string, role: User['role']): User {
     const list = getStoredUsers();
     if (list.some(u => u.username === username)) {
@@ -72,56 +80,12 @@ class SupabasePostGISMockService {
     return newUser;
   }
 
-  // Authenticate – returns user if credentials match
   async login(username: string, password: string): Promise<User | null> {
     const user = await findUser(username);
     if (user && user.password === password) {
       return user;
     }
     return null;
-  }
-
-  // ---------------------------------------------------------------------
-  // Export all data – returns a pretty‑printed JSON string
-  // ---------------------------------------------------------------------
-  exportAll(): string {
-    const data = {
-      puestos: this.getPuestos(),
-      testigos: this.getTestigos(),
-      votantes: this.getVotantes(),
-      actas: this.getActasE14(),
-      alertas: this.getAlertas(),
-      actors: this.getActors(),
-      users: this.getUsers(),
-    };
-    return JSON.stringify(data, null, 2);
-  }
-
-  // ---------------------------------------------------------------------
-  // Existing methods (unchanged) – kept here for context
-  // ---------------------------------------------------------------------
-  // ... (the rest of the original class stays the same) ...
-}
-
-export const supabaseMock = new SupabasePostGISMockService();
-
-  // Generic localStorage helpers
-  private getStorage<T>(key: string, defaultData: T): T {
-    try {
-      const saved = localStorage.getItem(key);
-      if (saved) return JSON.parse(saved) as T;
-    } catch (e) {
-      console.warn('LocalStorage read error for', key, e);
-    }
-    return defaultData;
-  }
-
-  private setStorage<T>(key: string, data: T): void {
-    try {
-      localStorage.setItem(key, JSON.stringify(data));
-    } catch (e) {
-      console.warn('LocalStorage write error for', key, e);
-    }
   }
 
   // ---------------------------------------------------------------------
@@ -294,7 +258,10 @@ export const supabaseMock = new SupabasePostGISMockService();
       const dLng = toRad(p.lng - centerLng);
       const a =
         Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-        Math.cos(toRad(centerLat)) * Math.cos(toRad(p.lat)) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+        Math.cos(toRad(centerLat)) *
+          Math.cos(toRad(p.lat)) *
+          Math.sin(dLng / 2) *
+          Math.sin(dLng / 2);
       const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
       const distance = R * c;
       return distance <= radiusKm;
@@ -308,6 +275,23 @@ export const supabaseMock = new SupabasePostGISMockService();
     Object.values(STORAGE_KEYS).forEach(key => localStorage.removeItem(key));
     localStorage.removeItem(ACTORS_KEY);
   }
+
+  // ---------------------------------------------------------------------
+  // Export all data – returns a pretty‑printed JSON string
+  // ---------------------------------------------------------------------
+  exportAll(): string {
+    const data = {
+      puestos: this.getPuestos(),
+      testigos: this.getTestigos(),
+      votantes: this.getVotantes(),
+      actas: this.getActasE14(),
+      alertas: this.getAlertas(),
+      actors: this.getActors(),
+      users: this.getUsers(),
+    };
+    return JSON.stringify(data, null, 2);
+  }
 }
 
+// Export singleton
 export const supabaseMock = new SupabasePostGISMockService();

@@ -73,7 +73,21 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
       .eq('user_id', user!.id)
       .single();
     if (!actorErr && actorData) {
-      set({ currentActorId: (actorData as Actor).id });
+      set({ currentActorId: (actorData as Actor).id, actors: [actorData as Actor, ...get().actors.filter(a => a.id !== (actorData as Actor).id)] });
+    } else {
+      // No actor linked – create one automatically so the user can enter the app
+      const nombre = (user!.user_metadata?.full_name as string) || email.split('@')[0];
+      const newActor: Omit<Actor, 'id'> = { nombre, role: 'voter', user_id: user!.id } as any;
+      const { data: inserted, error: insErr } = await getSupabase()
+        .from('actors')
+        .insert(newActor)
+        .select('*')
+        .single();
+      if (!insErr && inserted) {
+        set({ currentActorId: (inserted as Actor).id, actors: [inserted as Actor, ...get().actors] });
+      } else {
+        console.warn('Could not auto-create actor after login', insErr);
+      }
     }
     return user;
   },

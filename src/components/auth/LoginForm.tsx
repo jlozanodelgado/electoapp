@@ -6,11 +6,26 @@ export const LoginForm = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [msg, setMsg] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const user = await login(email, password);
-    setMsg(user ? `¡Bienvenido ${user.email}!` : 'Credenciales inválidas');
+    setLoading(true);
+    setMsg('');
+    try {
+      const user = await login(email, password);
+      if (user) {
+        const nombre = (user.user_metadata?.full_name as string) || email.split('@')[0];
+        setMsg(`¡Bienvenido ${nombre}!`);
+        // currentActorId is now set → App will re‑render and show the main UI
+      } else {
+        setMsg('Credenciales inválidas. Verifica tu correo y contraseña.');
+      }
+    } catch {
+      setMsg('Error al intentar ingresar. Intenta de nuevo.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -33,12 +48,12 @@ export const LoginForm = () => {
       />
       <button
         type="submit"
-        className="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-2 rounded"
+        disabled={loading}
+        className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white py-2 rounded"
       >
-        Ingresar
+        {loading ? 'Ingresando…' : 'Ingresar'}
       </button>
       {msg && <p className="mt-2 text-sm text-center">{msg}</p>}
     </form>
   );
 };
-

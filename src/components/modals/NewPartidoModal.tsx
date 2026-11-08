@@ -85,11 +85,12 @@ export const NewPartidoModal: React.FC = () => {
                   key={c.value}
                   type="button"
                   onClick={() => setColor(c.value)}
+                  style={{ backgroundColor: c.value }}
                   className={`w-9 h-9 rounded-full border-2 cursor-pointer ${
                     color === c.value
                       ? 'ring-2 ring-emerald-400 scale-110'
                       : 'ring-transparent'
-                  } bg-[${c.value}] border-slate-700 hover:scale-105 transition-transform`}
+                  } border-slate-700 hover:scale-105 transition-transform`}
                   title={c.label}
                 />
               ))}

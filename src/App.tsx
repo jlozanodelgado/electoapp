@@ -14,19 +14,31 @@ import { ToastContainer } from './components/ui/ToastContainer';
 import { useSecurityStore } from './store/securityStore';
 import { ActorSwitcher } from './components/ActorSwitcher';
 import { LoginForm } from './components/auth/LoginForm';
+import { getSupabase } from './services/getSupabase';
 
 export const App: React.FC = () => {
   // Load security actors on app start
   const loadActors = useSecurityStore(state => state.loadActors);
+  const getCurrentActorId = useSecurityStore(state => state.getCurrentActorId);
   const currentActorId = useSecurityStore(state => state.currentActorId);
   const actors = useSecurityStore(state => state.actors);
-  const { moduloActivo } = useElectoralStore();
+  const { moduloActivo, setActorId } = useElectoralStore();
 
   const currentActor = actors.find(a => a.id === currentActorId);
 
   useEffect(() => {
-    loadActors();
-  }, [loadActors]);
+    let mounted = true;
+    const init = async () => {
+      await loadActors();
+      if (!mounted) return;
+      const actorId = await getCurrentActorId();
+      if (mounted && actorId) {
+        setActorId(actorId);
+      }
+    };
+    init();
+    return () => { mounted = false; };
+  }, [loadActors, getCurrentActorId, setActorId]);
 
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden bg-[#090d16] text-slate-100 select-none">

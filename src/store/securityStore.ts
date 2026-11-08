@@ -59,6 +59,8 @@ interface SecurityState {
   // Authentication & Actor creation
   login: (email: string, password: string) => Promise<User | null>;
   registerUser: (data: RegisterUserData) => Promise<{ user?: User; actor: Actor }>;
+  // Actor vinculado al usuario de Supabase Auth
+  getCurrentActorId: () => Promise<string | null>;
   // Export all data as JSON string (async)
   exportAll: () => Promise<string>;
 }
@@ -279,6 +281,23 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
       actor: createdActor,
     };
   },
+  // Obtiene el id del actor vinculado al usuario de Supabase Auth actualmente logueado
+  getCurrentActorId: async () => {
+    try {
+      const { data: { user } } = await getSupabase().auth.getUser();
+      if (!user) return null;
+      const { data: actor, error } = await getSupabase()
+        .from('actors')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (error || !actor) return null;
+      return actor.id as string;
+    } catch {
+      return null;
+    }
+  },
+
   exportAll: async () => {
     const [{ data: actores }, { data: puestos }, { data: testigos }, { data: votantes }, { data: actas }, { data: alertas }] = await Promise.all([
       getSupabase().from('actors').select('*'),

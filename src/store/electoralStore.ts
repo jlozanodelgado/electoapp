@@ -39,6 +39,10 @@ interface ElectoralState {
   selectedPuestoId: string | null;
   drawerAbierto: boolean;
 
+  // Actor autenticado (para auditoría y RLS por filas propias)
+  actorId: string | null;
+  setActorId: (id: string | null) => void;
+
   // Colecciones de datos
   puestos: PuestoVotacion[];
   testigos: TestigoElectoral[];
@@ -120,6 +124,7 @@ export const useElectoralStore = create<ElectoralState>((set, get) => ({
 
   selectedPuestoId: null,
   drawerAbierto: false,
+  actorId: null,
 
   puestos: supabaseMock.getPuestos(),
   testigos: supabaseMock.getTestigos(),
@@ -214,6 +219,7 @@ export const useElectoralStore = create<ElectoralState>((set, get) => ({
   },
 
   setDrawerAbierto: (abierto) => set({ drawerAbierto: abierto }),
+  setActorId: (id) => set({ actorId: id }),
 
   setIsNewWitnessOpen: (open) => set({ isNewWitnessOpen: open }),
   setIsNewVoterOpen: (open) => set({ isNewVoterOpen: open }),
@@ -221,7 +227,11 @@ export const useElectoralStore = create<ElectoralState>((set, get) => ({
   setIsFraudModalOpen: (open, alerta = null) => set({ isFraudModalOpen: open, alertaSeleccionada: alerta }),
 
   addTestigo: (testigoData) => {
-    const nuevo = supabaseMock.addTestigo(testigoData);
+    const testigoConActor = {
+      ...testigoData,
+      actor_id: get().actorId || null,
+    };
+    const nuevo = supabaseMock.addTestigo(testigoConActor);
     set({ testigos: [nuevo, ...get().testigos] });
   },
 
@@ -231,7 +241,11 @@ export const useElectoralStore = create<ElectoralState>((set, get) => ({
   },
 
   addVotante: (votanteData) => {
-    const nuevo = supabaseMock.addVotante(votanteData);
+    const votanteConActor = {
+      ...votanteData,
+      actor_id: get().actorId || null,
+    };
+    const nuevo = supabaseMock.addVotante(votanteConActor);
     set({ votantes: [nuevo, ...get().votantes] });
   },
 
@@ -243,7 +257,11 @@ export const useElectoralStore = create<ElectoralState>((set, get) => ({
   },
 
   addActaE14: (actaData) => {
-    const { acta, nuevaAlerta } = supabaseMock.addActaE14(actaData);
+    const actaConActor = {
+      ...actaData,
+      actor_id: get().actorId || null,
+    };
+    const { acta, nuevaAlerta } = supabaseMock.addActaE14(actaConActor);
     const nuevasAlertas = nuevaAlerta ? [nuevaAlerta, ...get().alertas] : get().alertas;
     set({ 
       actas: [acta, ...get().actas],

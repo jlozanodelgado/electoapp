@@ -17,6 +17,8 @@ export const ActorSwitcher: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const activeActor = currentActor();
   const isSupervisorTotal = activeActor?.role === 'totalSupervisor';
+  const isCandidateSupervisor = activeActor?.role === 'candidateSupervisor';
+  const canCreateUsers = isSupervisorTotal || isCandidateSupervisor;
 
   return (
     <>
@@ -39,8 +41,8 @@ export const ActorSwitcher: React.FC = () => {
           ))}
         </select>
 
-        {/* Botón exclusivo para crear usuarios si eres Supervisor Total */}
-        {isSupervisorTotal && (
+        {/* Botón para crear usuarios: habilitado para Supervisor Total y Supervisor de Candidato */}
+        {canCreateUsers && (
           <button
             onClick={() => setIsModalOpen(true)}
             className="flex items-center gap-1 px-2.5 py-1 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 text-xs font-semibold rounded-lg transition-all shadow-sm"

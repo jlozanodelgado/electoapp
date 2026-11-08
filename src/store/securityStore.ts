@@ -1,7 +1,7 @@
 // Security store – manages actors (roles) and active session
 // ------------------------------------------------------------
 import { create } from 'zustand';
-import { Actor } from '../types/security';
+import { Actor, ScopeLevel } from '../types/security';
 import { getSupabase } from '../services/getSupabase';
 import type { User } from '@supabase/supabase-js';
 
@@ -10,7 +10,15 @@ function normalizeActor(raw: any): Actor {
   const role =
     raw.role ||
     raw.rol ||
-    (raw.nivel === 0 ? 'totalSupervisor' : raw.nivel === 1 ? 'candidateSupervisor' : raw.nivel === 2 ? 'leader' : raw.nivel === 3 ? 'witness' : 'voter');
+    (raw.nivel === 0
+      ? 'totalSupervisor'
+      : raw.nivel === 1
+      ? 'candidateSupervisor'
+      : raw.nivel === 2
+      ? 'leader'
+      : raw.nivel === 3
+      ? 'witness'
+      : 'voter');
 
   return {
     ...raw,
@@ -23,21 +31,32 @@ function normalizeActor(raw: any): Actor {
   } as Actor;
 }
 
+export interface RegisterUserData {
+  email: string;
+  password?: string;
+  nombre: string;
+  role: Actor['role'];
+  scopeLevel?: ScopeLevel;
+  scopeId?: string;
+  candidatoId?: string;
+  leaderId?: string;
+}
+
 interface SecurityState {
   actors: Actor[];
   currentActorId: string | null;
   // Load actors from Supabase
   loadActors: () => Promise<void>;
   // CRUD helpers delegating to Supabase
-  createActor: (actor: Omit<Actor, 'id'>) => Promise<void>;
+  createActor: (actor: Omit<Actor, 'id'>) => Promise<Actor>;
   updateActor: (id: string, updates: Partial<Actor>) => Promise<void>;
   deleteActor: (id: string) => Promise<void>;
   // Convenience getters
   currentActor: () => Actor | undefined;
   setCurrentActor: (id: string | null) => void;
-  // Authentication
+  // Authentication & Actor creation
   login: (email: string, password: string) => Promise<User | null>;
-  registerUser: (email: string, password: string, role: Actor['role']) => Promise<User>;
+  registerUser: (data: RegisterUserData) => Promise<{ user?: User; actor: Actor }>;
   // Export all data as JSON string (async)
   exportAll: () => Promise<string>;
 }
@@ -56,21 +75,43 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
     set({ actors: normalized });
   },
   createActor: async (actor) => {
+    const nivel =
+      actor.role === 'totalSupervisor'
+        ? 0
+        : actor.role === 'candidateSupervisor'
+        ? 1
+        : actor.role === 'leader'
+        ? 2
+        : actor.role === 'witness'
+        ? 3
+        : 4;
+
     const dbPayload = {
       nombre: actor.nombre,
       rol: actor.role,
-      nivel: actor.role === 'totalSupervisor' ? 0 : 4,
-      user_id: actor.user_id,
-      scope_level: actor.scopeLevel,
-      scope_id: actor.scopeId,
-      candidato_id: actor.candidatoId,
-      leader_id: actor.leaderId,
+      nivel,
+      user_id: actor.user_id || null,
+      scope_level: actor.scopeLevel || null,
+      scope_id: actor.scopeId || null,
+      candidato_id: actor.candidatoId || null,
+      leader_id: actor.leaderId || null,
+      territorio: actor.scopeId ? { scopeLevel: actor.scopeLevel, scopeId: actor.scopeId } : null,
     };
-    const { error } = await getSupabase().from('actors').insert(dbPayload);
-    if (error) console.warn('Create actor error', error);
-    // Refresh list
-    const { data } = await getSupabase().from('actors').select('*');
-    set({ actors: (data || []).map(normalizeActor) });
+
+    const { data, error } = await getSupabase()
+      .from('actors')
+      .insert(dbPayload)
+      .select('*')
+      .single();
+
+    if (error) {
+      console.error('Error insertando actor en Supabase:', error);
+      throw error;
+    }
+
+    const newActor = normalizeActor(data);
+    set({ actors: [newActor, ...get().actors.filter(a => a.id !== newActor.id)] });
+    return newActor;
   },
   updateActor: async (id, updates) => {
     const { error } = await getSupabase().from('actors').update(updates).eq('id', id);
@@ -97,17 +138,14 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
     }
 
     console.log('[ElectoApp] Auth OK – user id:', user!.id, 'email:', user!.email);
-
     const nombre = (user!.user_metadata?.full_name as string) || email.split('@')[0];
 
-    // 1) Intentar obtener actor vinculado por user_id
+    // 1) Buscar actor vinculado por user_id
     const { data: actorByUserId, error: err1 } = await getSupabase()
       .from('actors')
       .select('*')
       .eq('user_id', user!.id)
       .maybeSingle();
-
-    console.log('[ElectoApp] Step 1 – actor by user_id:', actorByUserId, 'error:', err1);
 
     if (!err1 && actorByUserId) {
       const actor = normalizeActor(actorByUserId);
@@ -118,18 +156,15 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
       return user;
     }
 
-    // 2) user_id no vinculado todavía: intentar buscar por nombre
+    // 2) Buscar por nombre para vincular si ya existía antes de tener user_id
     const { data: actorByName, error: err2 } = await getSupabase()
       .from('actors')
       .select('*')
       .ilike('nombre', `%${nombre}%`)
       .maybeSingle();
 
-    console.log('[ElectoApp] Step 2 – actor by nombre "' + nombre + '":', actorByName, 'error:', err2);
-
     if (!err2 && actorByName) {
       const actor = normalizeActor(actorByName);
-      // Vincular este actor al auth user_id en la BD
       await getSupabase().from('actors').update({ user_id: user!.id }).eq('id', actor.id);
       actor.user_id = user!.id;
       set({
@@ -139,93 +174,98 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
       return user;
     }
 
-    // 3) Consultar TODOS los actores de la tabla
+    // 3) Si hay actores, tomar el de mayor jerarquía disponible para el primer admin
     const { data: allActors, error: err3 } = await getSupabase()
       .from('actors')
       .select('*');
 
-    console.log('[ElectoApp] Step 3 – all actors in DB:', allActors, 'error:', err3);
-
     if (!err3 && allActors && allActors.length > 0) {
-      // Priorizar vincular con uno que sea supervisor si existe, o el primero
-      const supervisorActor = allActors.find((a: any) =>
-        String(a.rol).toLowerCase().includes('super') || a.nivel === 0
-      ) || allActors[0];
+      const supervisorActor =
+        allActors.find((a: any) => String(a.rol).toLowerCase().includes('super') || a.nivel === 0) ||
+        allActors[0];
 
       const actor = normalizeActor(supervisorActor);
       await getSupabase().from('actors').update({ user_id: user!.id }).eq('id', actor.id);
       actor.user_id = user!.id;
 
-      const normalizedList = allActors.map(normalizeActor);
       set({
         currentActorId: actor.id,
-        actors: normalizedList,
+        actors: allActors.map(normalizeActor),
       });
       return user;
     }
 
-    // 4) Si la tabla estuviese vacía o sin registros vinculables, insertar respetando el esquema SQL
-    // rol es USER-DEFINED o text, nivel es integer NOT NULL
-    const newActorPayload = {
-      nombre,
-      rol: 'totalSupervisor',
-      nivel: 0,
-      user_id: user!.id,
-      scope_level: 'national',
-    };
-
-    const { data: inserted, error: insErr } = await getSupabase()
-      .from('actors')
-      .insert(newActorPayload)
-      .select('*')
-      .single();
-
-    console.log('[ElectoApp] Step 4 – insert actor:', inserted, 'error:', insErr);
-
-    if (!insErr && inserted) {
-      const actor = normalizeActor(inserted);
-      set({
-        currentActorId: actor.id,
-        actors: [actor, ...get().actors],
+    // 4) Si no existe ninguno, crear el primer totalSupervisor en la BD
+    try {
+      const created = await get().createActor({
+        nombre,
+        role: 'totalSupervisor',
+        scopeLevel: 'national',
+        user_id: user!.id,
       });
-      return user;
+      set({ currentActorId: created.id });
+    } catch {
+      // Fallback local en memoria
+      const tempActor: Actor = {
+        id: `temp-${user!.id}`,
+        nombre,
+        role: 'totalSupervisor',
+        user_id: user!.id,
+        scopeLevel: 'national',
+      } as Actor;
+      set({
+        currentActorId: tempActor.id,
+        actors: [tempActor, ...get().actors],
+      });
     }
-
-    // 5) Fallback en memoria si RLS bloquea escrituras/lecturas
-    console.warn('[ElectoApp] Fallback – usando actor en memoria totalSupervisor');
-    const tempActor: Actor = {
-      id: `temp-${user!.id}`,
-      nombre,
-      role: 'totalSupervisor',
-      user_id: user!.id,
-      scopeLevel: 'national',
-    } as Actor;
-    set({
-      currentActorId: tempActor.id,
-      actors: [tempActor, ...get().actors],
-    });
 
     return user;
   },
-  registerUser: async (email, password, role) => {
-    const { data: { user }, error } = await getSupabase().auth.signUp({ email, password });
-    if (error) throw error;
-    const nombre = email.split('@')[0];
-    const actorPayload = {
-      nombre,
-      rol: role,
-      nivel: role === 'totalSupervisor' ? 0 : 4,
-      user_id: user!.id,
+  registerUser: async (data: RegisterUserData) => {
+    let createdAuthUser: User | undefined = undefined;
+
+    // 1. Crear el usuario en auth.users si se provee contraseña
+    if (data.password) {
+      const { data: authData, error: authError } = await getSupabase().auth.signUp({
+        email: data.email,
+        password: data.password,
+        options: {
+          data: {
+            full_name: data.nombre,
+            role: data.role,
+          },
+        },
+      });
+
+      if (authError) {
+        console.error('Error creando usuario en auth.users:', authError);
+        throw authError;
+      }
+
+      if (authData?.user) {
+        createdAuthUser = authData.user;
+      }
+    }
+
+    // 2. Insertar en la tabla public.actors asegurando user_id = auth.users.id
+    const actorToInsert: Omit<Actor, 'id'> = {
+      nombre: data.nombre,
+      role: data.role,
+      scopeLevel: data.scopeLevel,
+      scopeId: data.scopeId,
+      candidatoId: data.candidatoId,
+      leaderId: data.leaderId,
+      user_id: createdAuthUser?.id,
     };
-    const { error: actErr } = await getSupabase().from('actors').insert(actorPayload);
-    if (actErr) console.warn('Actor insert after registration failed', actErr);
-    // Refresh actors list
-    const { data } = await getSupabase().from('actors').select('*');
-    set({ actors: (data || []).map(normalizeActor) });
-    return user!;
+
+    const createdActor = await get().createActor(actorToInsert);
+
+    return {
+      user: createdAuthUser,
+      actor: createdActor,
+    };
   },
   exportAll: async () => {
-    // Direct fetch of all relevant tables (fallback implementation)
     const [{ data: actores }, { data: puestos }, { data: testigos }, { data: votantes }, { data: actas }, { data: alertas }] = await Promise.all([
       getSupabase().from('actors').select('*'),
       getSupabase().from('puestos_votacion').select('*'),

@@ -31,15 +31,8 @@ export const App: React.FC = () => {
   const isDark = theme === 'dark';
 
   useEffect(() => {
-    if (isDark) {
-      document.documentElement.classList.remove('light');
-      document.documentElement.classList.add('dark');
-      document.documentElement.setAttribute('data-theme', 'dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      document.documentElement.classList.add('light');
-      document.documentElement.setAttribute('data-theme', 'light');
-    }
+    document.documentElement.classList.toggle('dark', isDark);
+    document.documentElement.classList.toggle('light', !isDark);
   }, [isDark]);
 
   useEffect(() => {

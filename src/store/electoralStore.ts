@@ -265,6 +265,12 @@ export const useElectoralStore = create<ElectoralState>((set, get) => ({
   addCandidato: async (candidatoData) => {
     const nuevo = await SupabaseService.saveCandidato(candidatoData as Candidato);
     set({ candidatos: [nuevo, ...get().candidatos] });
+    get().addToast({
+      type: 'success',
+      title: 'Candidato registrado',
+      message: `${nuevo.nombre} ${nuevo.apellido ?? ''} fue inscrito exitosamente`,
+    });
+    console.log('[Candidato] Guardado:', nuevo);
     return nuevo;
   },
 

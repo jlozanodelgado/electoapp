@@ -320,7 +320,7 @@ export class SupabaseService {
         .select('*')
         .order('nombre');
 
-      if (error || !data) {
+      if (error || !data || data.length === 0) {
         return supabaseMock.getPartidos();
       }
 
@@ -369,7 +369,7 @@ export class SupabaseService {
         .select('*')
         .order('nombre');
 
-      if (error || !data) {
+      if (error || !data || data.length === 0) {
         return supabaseMock.getCandidatos();
       }
 
@@ -430,7 +430,7 @@ export class SupabaseService {
         .select('*')
         .order('creado_en', { ascending: false });
 
-      if (error || !data) {
+      if (error || !data || data.length === 0) {
         return supabaseMock.getActors();
       }
 

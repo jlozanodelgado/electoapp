@@ -65,6 +65,8 @@ export const NewCandidatoModal: React.FC = () => {
 
   if (!partidos || partidos.length === 0) return null;
 
+  const [keepOpen, setKeepOpen] = useState(false);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!nombre || !cedula || !partidoId) return;
@@ -83,15 +85,27 @@ export const NewCandidatoModal: React.FC = () => {
       fotoUrl: fotoUrl || undefined,
     });
 
-    setIsNewCandidatoOpen(false);
-    setNombre('');
-    setApellido('');
-    setCedula('');
-    setNumeroTarjeton('');
-    setNumeroLista('');
-    setPartidoId(partidos[0].id);
-    setMunicipioId('');
-    setFotoUrl('');
+    if (keepOpen) {
+      // Limpiar formulario pero mantener modal abierto para crear otro
+      setNombre('');
+      setApellido('');
+      setCedula('');
+      setNumeroTarjeton('');
+      setNumeroLista('');
+      setPartidoId(partidos[0].id);
+      setMunicipioId('');
+      setFotoUrl('');
+    } else {
+      setIsNewCandidatoOpen(false);
+      setNombre('');
+      setApellido('');
+      setCedula('');
+      setNumeroTarjeton('');
+      setNumeroLista('');
+      setPartidoId(partidos[0].id);
+      setMunicipioId('');
+      setFotoUrl('');
+    }
   };
 
   return (
@@ -267,12 +281,24 @@ export const NewCandidatoModal: React.FC = () => {
             </p>
           </div>
 
-          <div className="pt-3 border-t border-slate-800 flex justify-end gap-2">
+          <div className="pt-3 border-t border-slate-800 flex flex-col sm:flex-row gap-2">
+            <div className="flex-1">
+              <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-400">
+                <input
+                  type="checkbox"
+                  checked={keepOpen}
+                  onChange={(e) => setKeepOpen(e.target.checked)}
+                  className="w-4 h-4 rounded bg-slate-950 border-slate-700 text-emerald-500 focus:ring-emerald-500"
+                />
+                <span>Crear otro candidato después</span>
+              </label>
+            </div>
             <Button
               type="button"
               variant="outline"
               size="sm"
               onClick={() => setIsNewCandidatoOpen(false)}
+              className="flex-1"
             >
               Cancelar
             </Button>
@@ -283,7 +309,7 @@ export const NewCandidatoModal: React.FC = () => {
               icon={<Building className="w-4 h-4" />}
               disabled={!nombre || !cedula || !partidoId}
             >
-              Registrar Candidato
+              {keepOpen ? 'Crear Otro' : 'Crear y Salir'}
             </Button>
           </div>
         </form>

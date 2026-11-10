@@ -48,6 +48,10 @@ interface ElectoralState {
   actorRole: string | null;
   setActorId: (id: string | null, role?: string | null) => void;
 
+  // Control de visibilidad de votantes en el mapa
+  mostrarVotantesMapa: boolean;
+  setMostrarVotantesMapa: (visible: boolean) => void;
+
   // Estado de activación del Día D (solo totalSupervisor puede activarlo)
   diaDActivado: boolean;
   setDiaDActivado: (activado: boolean) => void;
@@ -152,6 +156,7 @@ export const useElectoralStore = create<ElectoralState>((set, get) => ({
   actorId: null,
   actorRole: null,
   diaDActivado: false,
+  mostrarVotantesMapa: true,
 
   partidos: [],
   candidatos: [],
@@ -252,6 +257,8 @@ export const useElectoralStore = create<ElectoralState>((set, get) => ({
 
   setDrawerAbierto: (abierto) => set({ drawerAbierto: abierto }),
   setActorId: (id, role = null) => set({ actorId: id, actorRole: role }),
+
+  setMostrarVotantesMapa: (visible) => set({ mostrarVotantesMapa: visible }),
 
   setDiaDActivado: (activado) => set({ diaDActivado: activado }),
 

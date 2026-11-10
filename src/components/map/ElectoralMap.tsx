@@ -8,6 +8,7 @@ import {
 } from '../../data/geojsonBoundaries';
 import { DEPARTAMENTOS, MUNICIPIOS } from '../../data/mockElectoralData';
 import { supabaseMock } from '../../services/supabaseMock';
+import { VotanteCRM } from '../../types/electoral';
 
 /**
  * Componente del mapa principal.
@@ -25,6 +26,7 @@ export const ElectoralMap: React.FC = () => {
   const mapInstanceRef = useRef<L.Map | null>(null);
   const geojsonLayerRef = useRef<L.GeoJSON | null>(null);
   const markersLayerRef = useRef<L.LayerGroup | null>(null);
+  const votantesLayerRef = useRef<L.LayerGroup | null>(null);
   const bufferCircleRef = useRef<L.Circle | null>(null);
   const heatmapLayerRef = useRef<L.LayerGroup | null>(null);
   const baseLayerRef = useRef<L.TileLayer | null>(null);
@@ -41,9 +43,11 @@ export const ElectoralMap: React.FC = () => {
     selectedPuestoId,
     setSelectedPuestoId,
     puestos,
+    votantes,
     mostrarHeatmap,
     radioInfluenciaKm,
     tipoBasemap,
+    mostrarVotantesMapa,
     setDepartamentoId,
     setMunicipioId,
   } = useElectoralStore();
@@ -71,6 +75,10 @@ export const ElectoralMap: React.FC = () => {
 
     const heatmapGroup = L.layerGroup().addTo(map);
     heatmapLayerRef.current = heatmapGroup;
+
+    // Capa de votantes (viviendas con coordenadas)
+    const votantesGroup = L.layerGroup().addTo(map);
+    votantesLayerRef.current = votantesGroup;
 
     mapInstanceRef.current = map;
 
@@ -379,6 +387,78 @@ export const ElectoralMap: React.FC = () => {
     capaMetrica,
     selectedPuestoId,
   ]);
+
+  // -----------------------------------------------------------------
+  // 4b️⃣  Marcadores de votantes (viviendas con coordenadas)
+  // -----------------------------------------------------------------
+  useEffect(() => {
+    const votantesGroup = votantesLayerRef.current;
+    if (!votantesGroup) return;
+
+    // Si no se deben mostrar votantes en el mapa, limpiar y salir
+    if (!mostrarVotantesMapa) {
+      votantesGroup.clearLayers();
+      return;
+    }
+
+    votantesGroup.clearLayers();
+
+    const votantesConCoordenadas = (votantes || []).filter(
+      (p) => p.lat && p.lng
+    );
+
+    // Filtrar por territorio si aplica
+    const filtrados = votantesConCoordenadas.filter((v) => {
+      if (!v.lat || !v.lng) return false;
+      if (departamentoId !== 'todos' && v.puestoId) {
+        const puesto = puestos.find((p) => p.id === v.puestoId);
+        if (!puesto) return false;
+        if (departamentoId !== 'todos' && puesto.departamentoId !== departamentoId) {
+          return false;
+        }
+      }
+      if (municipioId !== 'todos' && v.puestoId) {
+        const puesto = puestos.find((p) => p.id === v.puestoId);
+        if (!puesto) return false;
+        if (municipioId !== 'todos' && puesto.municipioId !== municipioId) {
+          return false;
+        }
+      }
+      return true;
+    });
+
+    filtrados.forEach((v) => {
+      const marker = L.circleMarker([v.lat!, v.lng!], {
+        radius: 6,
+        color: v.yaVoto ? '#10b981' : '#3b82f6',
+        fillColor: v.yaVoto ? '#10b981' : '#3b82f6',
+        fillOpacity: 0.7,
+        weight: 2,
+      });
+
+      marker.bindTooltip(
+        `
+        <div class="p-2 text-xs font-sans max-w-[200px]">
+          <strong class="text-white block text-sm font-bold truncate">${v.nombre}</strong>
+          <span class="text-slate-400">${v.barrio || v.direccion}</span>
+          <div class="mt-1 pt-1 border-t border-slate-700 flex justify-between text-[11px]">
+            <span class="text-slate-400">CC: ${v.cedula}</span>
+            <span class="${v.yaVoto ? 'text-emerald-400' : 'text-rose-400'}">
+              ${v.yaVoto ? 'Ya votó' : 'Pendiente'}
+            </span>
+          </div>
+        </div>
+        `,
+        {
+          className: 'bg-slate-900 border border-slate-700 text-slate-100 rounded-lg shadow-xl',
+          direction: 'top',
+          offset: [0, -10],
+        },
+      );
+
+      marker.addTo(votantesGroup);
+    });
+  }, [votantes, puestos, departamentoId, municipioId, mostrarVotantesMapa]);
 
   // -----------------------------------------------------------------
   // 5️⃣  Buffer (radio de influencia) – simulación PostGIS ST_DWithin

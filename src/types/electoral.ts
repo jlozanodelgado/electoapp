@@ -144,6 +144,8 @@ export interface VotanteCRM {
   necesitaTransporte: boolean;
   yaVoto: boolean;
   leaderId?: string; // amarrado a un líder
+  lat?: number; // coordenada de residencia/vivienda
+  lng?: number; // coordenada de residencia/vivienda
 }
 
 export interface ActaE14 {

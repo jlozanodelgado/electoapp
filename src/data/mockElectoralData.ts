@@ -909,6 +909,8 @@ export const VOTANTES_INICIALES: VotanteCRM[] = [
     contactado: true,
     necesitaTransporte: false,
     yaVoto: true,
+    lat: 4.0860,
+    lng: -76.1970,
   },
   {
     id: 'votante-tul-02',
@@ -923,6 +925,8 @@ export const VOTANTES_INICIALES: VotanteCRM[] = [
     contactado: true,
     necesitaTransporte: false,
     yaVoto: true,
+    lat: 4.0770,
+    lng: -76.1980,
   },
   {
     id: 'votante-tul-03',
@@ -937,6 +941,8 @@ export const VOTANTES_INICIALES: VotanteCRM[] = [
     contactado: true,
     necesitaTransporte: true,
     yaVoto: false,
+    lat: 4.0740,
+    lng: -76.2040,
   },
   {
     id: 'votante-tul-04',
@@ -951,6 +957,8 @@ export const VOTANTES_INICIALES: VotanteCRM[] = [
     contactado: true,
     necesitaTransporte: false,
     yaVoto: true,
+    lat: 4.0910,
+    lng: -76.1950,
   },
   {
     id: 'votante-tul-05',
@@ -965,6 +973,8 @@ export const VOTANTES_INICIALES: VotanteCRM[] = [
     contactado: true,
     necesitaTransporte: false,
     yaVoto: false,
+    lat: 4.0940,
+    lng: -76.2060,
   },
   {
     id: 'votante-tul-06',
@@ -979,6 +989,8 @@ export const VOTANTES_INICIALES: VotanteCRM[] = [
     contactado: true,
     necesitaTransporte: true,
     yaVoto: true,
+    lat: 4.0560,
+    lng: -76.1840,
   },
 ];
 

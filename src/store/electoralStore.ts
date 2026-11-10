@@ -290,14 +290,18 @@ export const useElectoralStore = create<ElectoralState>((set, get) => ({
 
     // Reglas de jerarquía automática según el rol del creador
     if (creadorRole === 'totalSupervisor') {
-      supervisorId = undefined;
-      candidatoId = undefined;
+      // totalSupervisor puede crear líderes y asignarles supervisor_id y candidato_id
+      // Si no se especifican, quedan sin amarrar (se puede editar después)
+      supervisorId = actorData.supervisorId ?? undefined;
+      candidatoId = actorData.candidatoId ?? undefined;
     } else if (creadorRole === 'candidateSupervisor') {
+      // candidateSupervisor crea líderes amarrados a sí mismo y a su candidato
       supervisorId = creadorId ?? undefined;
       candidatoId = actorData.candidatoId ?? get().candidatos.find(c => 
         get().actors.some(a => a.id === creadorId && a.candidatoId === c.id)
       )?.id;
     } else if (creadorRole === 'leader') {
+      // leader crea testigos y votantes amarrados a sí mismo como líder
       leaderId = creadorId ?? undefined;
       supervisorId = undefined;
       candidatoId = undefined;

@@ -82,6 +82,14 @@ export const ActorSwitcher: React.FC = () => {
               <Building className="w-3.5 h-3.5 text-blue-400" />
               <span>Candidato</span>
             </button>
+            <button
+              onClick={() => setIsCreateUserOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1 bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/40 text-purple-300 text-xs font-bold rounded-lg transition-all shadow-sm shadow-purple-950/40 whitespace-nowrap"
+              title="Crear líder (Supervisor de Candidato)"
+            >
+              <User className="w-3.5 h-3.5 text-purple-400" />
+              <span>Líder</span>
+            </button>
           </>
         )}
 

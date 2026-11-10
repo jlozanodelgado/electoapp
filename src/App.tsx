@@ -10,6 +10,7 @@ import { NewWitnessModal } from './components/modals/NewWitnessModal';
 import { NewVoterModal } from './components/modals/NewVoterModal';
 import { CandidatosModule } from './components/modules/CandidatosModule';
 import { PreparacionModule } from './components/modules/PreparacionModule';
+import { TerritoryDashboard } from './components/modules/TerritoryDashboard';
 import { DigitalizeE14Modal } from './components/modals/DigitalizeE14Modal';
 import { FraudAlertModal } from './components/modals/FraudAlertModal';
 import { ToastContainer } from './components/ui/ToastContainer';
@@ -96,6 +97,7 @@ export const App: React.FC = () => {
               {moduloActivo === 'mapa' && <MapViewerModule />}
               {moduloActivo === 'campana' && <CampaignCommandModule />}
               {moduloActivo === 'candidatos' && <CandidatosModule />}
+              {moduloActivo === 'territorio' && <TerritoryDashboard />}
               {moduloActivo === 'preparacion' && <PreparacionModule />}
               {moduloActivo === 'dia_d' && <DayDModule />}
               {moduloActivo === 'ejecutivo' && <ExecutiveDashboardModule />}

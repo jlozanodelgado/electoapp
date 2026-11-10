@@ -13,7 +13,8 @@ import {
   Users2,
   CheckCircle2,
   Clock,
-  User
+  User,
+  Home
 } from 'lucide-react';
 
 export const Sidebar: React.FC = () => {
@@ -26,6 +27,12 @@ export const Sidebar: React.FC = () => {
   const isSupervisor = actorRole === 'supervisor_total' || actorRole === 'supervisor_candidato';
 
   const allNavItems: Array<{ id: ModuloActivo; label: string; desc: string; icon: React.ReactNode }> = [
+    {
+      id: 'territorio',
+      label: 'Territorio',
+      desc: 'Mapa, viviendas y direcciones',
+      icon: <Home className="w-5 h-5" />,
+    },
     {
       id: 'mapa',
       label: 'Visor Cartográfico',

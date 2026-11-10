@@ -13,8 +13,8 @@ import {
 } from '../types/electoral';
 import { Toast, CuadranteTactico, TipoBasemap } from '../types/tactical';
 import { isPointInPolygon } from '../utils/geoUtils';
-import { supabaseMock } from '../services/supabaseMock';
 import { SupabaseService } from '../services/supabaseService';
+import { supabaseMock } from '../services/supabaseMock';
 
 export type ModuloActivo = 'mapa' | 'campana' | 'candidatos' | 'preparacion' | 'dia_d' | 'ejecutivo' | 'territorio';
 
@@ -327,12 +327,17 @@ export const useElectoralStore = create<ElectoralState>((set, get) => ({
 
   // Carga inicial de datos jerárquicos
   loadHierarchicalData: async () => {
-    const [partidos, candidatos, actors] = await Promise.all([
+    const [partidos, candidatos, actors, puestos, testigos, votantes, actas, alertas] = await Promise.all([
       SupabaseService.getPartidos(),
       SupabaseService.getCandidatos(),
       SupabaseService.getActors(),
+      SupabaseService.getPuestos(),
+      SupabaseService.getTestigos(),
+      SupabaseService.getVotantes(),
+      SupabaseService.getActasE14(),
+      SupabaseService.getAlertas(),
     ]);
-    set({ partidos, candidatos, actors });
+    set({ partidos, candidatos, actors, puestos, testigos, votantes, actas, alertas });
   },
 
   setIsNewWitnessOpen: (open) => set({ isNewWitnessOpen: open }),
@@ -342,7 +347,7 @@ export const useElectoralStore = create<ElectoralState>((set, get) => ({
   setIsDigitalizeE14Open: (open) => set({ isDigitalizeE14Open: open }),
   setIsFraudModalOpen: (open, alerta = null) => set({ isFraudModalOpen: open, alertaSeleccionada: alerta }),
 
-  addTestigo: (testigoData) => {
+  addTestigo: async (testigoData) => {
     const { actorId, actorRole } = get();
     // Un testigo debe estar amarrado a un líder
     const leaderId = actorRole === 'leader' ? actorId : testigoData.leaderId;
@@ -350,16 +355,17 @@ export const useElectoralStore = create<ElectoralState>((set, get) => ({
       ...testigoData,
       leaderId: leaderId ?? undefined,
     };
-    const nuevo = supabaseMock.addTestigo(testigoConLider);
+    const nuevo = await SupabaseService.saveTestigo(testigoConLider);
     set({ testigos: [nuevo, ...get().testigos] });
+    return nuevo;
   },
 
-  updateTestigoEstado: (id, estado) => {
-    const updated = supabaseMock.updateTestigo(id, { estado });
+  updateTestigoEstado: async (id, estado) => {
+    const updated = await SupabaseService.updateTestigo(id, { estado });
     set({ testigos: updated });
   },
 
-  addVotante: (votanteData) => {
+  addVotante: async (votanteData) => {
     const { actorId, actorRole } = get();
     // Un votante debe estar amarrado a un líder
     const leaderId = actorRole === 'leader' ? actorId : votanteData.leaderId;
@@ -367,18 +373,19 @@ export const useElectoralStore = create<ElectoralState>((set, get) => ({
       ...votanteData,
       leaderId: leaderId ?? undefined,
     };
-    const nuevo = supabaseMock.addVotante(votanteConLider);
+    const nuevo = await SupabaseService.saveVotante(votanteConLider);
     set({ votantes: [nuevo, ...get().votantes] });
+    return nuevo;
   },
 
-  toggleVotanteYaVoto: (id) => {
+  toggleVotanteYaVoto: async (id) => {
     const target = get().votantes.find(v => v.id === id);
     if (!target) return;
-    const updated = supabaseMock.updateVotante(id, { yaVoto: !target.yaVoto });
+    const updated = await SupabaseService.updateVotante(id, { yaVoto: !target.yaVoto });
     set({ votantes: updated });
   },
 
-  addActaE14: (actaData) => {
+  addActaE14: async (actaData) => {
     const { actorId, actorRole } = get();
     // Un acta es digitalizada por un líder o testigo (quien tiene actor_id)
     const leaderId = (actorRole === 'leader' || actorRole === 'witness') ? actorId : actaData.leaderId;
@@ -386,15 +393,16 @@ export const useElectoralStore = create<ElectoralState>((set, get) => ({
       ...actaData,
       leaderId: leaderId ?? undefined,
     };
-    const acta = supabaseMock.addActaE14(actaConLider);
+    const acta = await SupabaseService.saveActaE14(actaConLider);
     set({ 
       actas: [acta, ...get().actas],
     });
+    return acta;
   },
 
-  resolverAlerta: (id) => {
+  resolverAlerta: async (id) => {
     const { actorId, actorRole } = get();
-    const updated = supabaseMock.resolverAlerta(id, {
+    const updated = await SupabaseService.resolverAlerta(id, {
       leaderId: (actorRole === 'leader' || actorRole === 'witness') ? actorId ?? undefined : undefined,
     });
     set({ alertas: updated });

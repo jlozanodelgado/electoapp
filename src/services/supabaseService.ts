@@ -12,7 +12,9 @@ import {
 } from '../types/electoral';
 
 export class SupabaseService {
-  // Carga inicial de Puestos
+  // ---------------------------------------------------------------------
+  // Puestos (voting places)
+  // ---------------------------------------------------------------------
   static async getPuestos(): Promise<PuestoVotacion[]> {
     if (!isSupabaseConfigured() || !supabase) {
       return supabaseMock.getPuestos();
@@ -32,7 +34,6 @@ export class SupabaseService {
         return supabaseMock.getPuestos();
       }
 
-      // Mapear snake_case a camelCase si viene de PostgreSQL
       return data.map((p: any) => ({
         id: p.id,
         nombre: p.nombre,
@@ -73,7 +74,9 @@ export class SupabaseService {
     }
   }
 
-  // Testigos Electorales
+  // ---------------------------------------------------------------------
+  // Testigos (electoral witnesses)
+  // ---------------------------------------------------------------------
   static async getTestigos(): Promise<TestigoElectoral[]> {
     if (!isSupabaseConfigured() || !supabase) {
       return supabaseMock.getTestigos();
@@ -100,6 +103,7 @@ export class SupabaseService {
         rol: t.rol,
         estado: t.estado,
         horaLlegada: t.hora_llegada || t.horaLlegada,
+        leaderId: t.leader_id || t.leaderId,
       }));
     } catch (err) {
       return supabaseMock.getTestigos();
@@ -111,27 +115,74 @@ export class SupabaseService {
 
     if (isSupabaseConfigured() && supabase) {
       try {
-        await supabase.from('testigos_electorales').insert({
-          id: nuevoMock.id,
-          puesto_id: testigo.puestoId,
-          puesto_nombre: testigo.puestoNombre,
-          mesa_numero: testigo.mesaNumero,
-          nombre: testigo.nombre,
-          cedula: testigo.cedula,
-          telefono: testigo.telefono,
-          rol: testigo.rol,
-          estado: testigo.estado,
-          hora_llegada: testigo.horaLlegada,
-        });
+        const { data, error } = await supabase
+          .from('testigos_electorales')
+          .insert({
+            id: nuevoMock.id,
+            puesto_id: testigo.puestoId,
+            puesto_nombre: testigo.puestoNombre,
+            mesa_numero: testigo.mesaNumero,
+            nombre: testigo.nombre,
+            cedula: testigo.cedula,
+            telefono: testigo.telefono,
+            rol: testigo.rol,
+            estado: testigo.estado,
+            hora_llegada: testigo.horaLlegada,
+            leader_id: testigo.leaderId,
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+        if (data) {
+          return {
+            id: data.id,
+            puestoId: data.puesto_id,
+            puestoNombre: data.puesto_nombre,
+            mesaNumero: data.mesa_numero,
+            nombre: data.nombre,
+            cedula: data.cedula,
+            telefono: data.telefono,
+            rol: data.rol,
+            estado: data.estado,
+            horaLlegada: data.hora_llegada,
+            leaderId: data.leader_id,
+          };
+        }
       } catch (e) {
-        console.warn('Error guardando en Supabase remoto:', e);
+        console.warn('Error guardando testigo en Supabase:', e);
       }
     }
 
     return nuevoMock;
   }
 
-  // Votantes CRM
+  static async updateTestigo(id: string, updates: Partial<TestigoElectoral>): Promise<TestigoElectoral[]> {
+    const updatedMock = supabaseMock.updateTestigo(id, updates);
+
+    if (isSupabaseConfigured() && supabase) {
+      try {
+        const updatesDb: any = {};
+        if (updates.estado !== undefined) updatesDb.estado = updates.estado;
+        if (updates.horaLlegada !== undefined) updatesDb.hora_llegada = updates.horaLlegada;
+        if (updates.nombre !== undefined) updatesDb.nombre = updates.nombre;
+        if (updates.cedula !== undefined) updatesDb.cedula = updates.cedula;
+        if (updates.telefono !== undefined) updatesDb.telefono = updates.telefono;
+        if (updates.rol !== undefined) updatesDb.rol = updates.rol;
+        if (updates.leaderId !== undefined) updatesDb.leader_id = updates.leaderId;
+
+        await supabase.from('testigos_electorales').update(updatesDb).eq('id', id);
+      } catch (e) {
+        console.warn('Error actualizando testigo en Supabase:', e);
+      }
+    }
+
+    return updatedMock;
+  }
+
+  // ---------------------------------------------------------------------
+  // Votantes (CRM voters)
+  // ---------------------------------------------------------------------
   static async getVotantes(): Promise<VotanteCRM[]> {
     if (!isSupabaseConfigured() || !supabase) {
       return supabaseMock.getVotantes();
@@ -160,6 +211,9 @@ export class SupabaseService {
         contactado: v.contactado,
         necesitaTransporte: v.necesita_transporte || v.necesitaTransporte,
         yaVoto: v.ya_voto || v.yaVoto,
+        leaderId: v.leader_id || v.leaderId,
+        lat: v.lat,
+        lng: v.lng,
       }));
     } catch (err) {
       return supabaseMock.getVotantes();
@@ -171,20 +225,48 @@ export class SupabaseService {
 
     if (isSupabaseConfigured() && supabase) {
       try {
-        await supabase.from('votantes_crm').insert({
-          id: nuevoMock.id,
-          puesto_id: votante.puestoId,
-          nombre: votante.nombre,
-          cedula: votante.cedula,
-          telefono: votante.telefono,
-          direccion: votante.direccion,
-          barrio: votante.barrio,
-          intencion_voto: votante.intencionVoto,
-          lider_asignado: votante.liderAsignado,
-          contactado: votante.contactado,
-          necesita_transporte: votante.necesitaTransporte,
-          ya_voto: votante.yaVoto,
-        });
+        const { data, error } = await supabase
+          .from('votantes_crm')
+          .insert({
+            id: nuevoMock.id,
+            puesto_id: votante.puestoId,
+            nombre: votante.nombre,
+            cedula: votante.cedula,
+            telefono: votante.telefono,
+            direccion: votante.direccion,
+            barrio: votante.barrio,
+            intencion_voto: votante.intencionVoto,
+            lider_asignado: votante.liderAsignado,
+            contactado: votante.contactado,
+            necesita_transporte: votante.necesitaTransporte,
+            ya_voto: votante.yaVoto,
+            leader_id: votante.leaderId,
+            lat: votante.lat,
+            lng: votante.lng,
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+        if (data) {
+          return {
+            id: data.id,
+            puestoId: data.puesto_id,
+            nombre: data.nombre,
+            cedula: data.cedula,
+            telefono: data.telefono,
+            direccion: data.direccion,
+            barrio: data.barrio,
+            intencionVoto: data.intencion_voto,
+            liderAsignado: data.lider_asignado,
+            contactado: data.contactado,
+            necesitaTransporte: data.necesita_transporte,
+            yaVoto: data.ya_voto,
+            leaderId: data.leader_id,
+            lat: data.lat,
+            lng: data.lng,
+          };
+        }
       } catch (e) {
         console.warn('Error guardando votante en Supabase:', e);
       }
@@ -193,7 +275,38 @@ export class SupabaseService {
     return nuevoMock;
   }
 
-  // Actas E-14
+  static async updateVotante(id: string, updates: Partial<VotanteCRM>): Promise<VotanteCRM[]> {
+    const updatedMock = supabaseMock.updateVotante(id, updates);
+
+    if (isSupabaseConfigured() && supabase) {
+      try {
+        const updatesDb: any = {};
+        if (updates.nombre !== undefined) updatesDb.nombre = updates.nombre;
+        if (updates.cedula !== undefined) updatesDb.cedula = updates.cedula;
+        if (updates.telefono !== undefined) updatesDb.telefono = updates.telefono;
+        if (updates.direccion !== undefined) updatesDb.direccion = updates.direccion;
+        if (updates.barrio !== undefined) updatesDb.barrio = updates.barrio;
+        if (updates.intencionVoto !== undefined) updatesDb.intencion_voto = updates.intencionVoto;
+        if (updates.liderAsignado !== undefined) updatesDb.lider_asignado = updates.liderAsignado;
+        if (updates.contactado !== undefined) updatesDb.contactado = updates.contactado;
+        if (updates.necesitaTransporte !== undefined) updatesDb.necesita_transporte = updates.necesitaTransporte;
+        if (updates.yaVoto !== undefined) updatesDb.ya_voto = updates.yaVoto;
+        if (updates.leaderId !== undefined) updatesDb.leader_id = updates.leaderId;
+        if (updates.lat !== undefined) updatesDb.lat = updates.lat;
+        if (updates.lng !== undefined) updatesDb.lng = updates.lng;
+
+        await supabase.from('votantes_crm').update(updatesDb).eq('id', id);
+      } catch (e) {
+        console.warn('Error actualizando votante en Supabase:', e);
+      }
+    }
+
+    return updatedMock;
+  }
+
+  // ---------------------------------------------------------------------
+  // Actas E14 (electoral act records)
+  // ---------------------------------------------------------------------
   static async getActasE14(): Promise<ActaE14[]> {
     if (!isSupabaseConfigured() || !supabase) {
       return supabaseMock.getActasE14();
@@ -225,6 +338,7 @@ export class SupabaseService {
         totalVotosUrna: a.total_votos_urna || a.totalVotosUrna,
         estadoRevision: a.estado_revision || a.estadoRevision,
         fotoActaUrl: a.foto_acta_url || a.fotoActaUrl,
+        leaderId: a.leader_id || a.leaderId,
       }));
     } catch (err) {
       return supabaseMock.getActasE14();
@@ -232,36 +346,92 @@ export class SupabaseService {
   }
 
   static async saveActaE14(acta: Omit<ActaE14, 'id'>): Promise<ActaE14> {
-    const res = supabaseMock.addActaE14(acta);
+    const nuevoMock = supabaseMock.addActaE14(acta);
 
     if (isSupabaseConfigured() && supabase) {
       try {
-        await supabase.from('actas_e14').insert({
-          id: res.id,
-          puesto_id: acta.puestoId,
-          mesa_numero: acta.mesaNumero,
-          hora_reporte: acta.horaReporte,
-          digitalizado_por: acta.digitalizadoPor,
-          votos_coalicion: acta.votosCoalicion,
-          votos_alianza: acta.votosAlianza,
-          votos_unidad: acta.votosUnidad,
-          votos_otros: acta.votosOtros,
-          votos_blanco: acta.votosBlanco,
-          votos_nulos: acta.votosNulos,
-          votos_no_marcados: acta.votosNoMarcados,
-          total_votos_urna: acta.totalVotosUrna,
-          estado_revision: acta.estadoRevision,
-          foto_acta_url: acta.fotoActaUrl,
-        });
+        const { data, error } = await supabase
+          .from('actas_e14')
+          .insert({
+            id: nuevoMock.id,
+            puesto_id: acta.puestoId,
+            mesa_numero: acta.mesaNumero,
+            hora_reporte: acta.horaReporte,
+            digitalizado_por: acta.digitalizadoPor,
+            votos_coalicion: acta.votosCoalicion,
+            votos_alianza: acta.votosAlianza,
+            votos_unidad: acta.votosUnidad,
+            votos_otros: acta.votosOtros,
+            votos_blanco: acta.votosBlanco,
+            votos_nulos: acta.votosNulos,
+            votos_no_marcados: acta.votosNoMarcados,
+            total_votos_urna: acta.totalVotosUrna,
+            estado_revision: acta.estadoRevision,
+            foto_acta_url: acta.fotoActaUrl,
+            leader_id: acta.leaderId,
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+        if (data) {
+          return {
+            id: data.id,
+            puestoId: data.puesto_id,
+            mesaNumero: data.mesa_numero,
+            horaReporte: data.hora_reporte,
+            digitalizadoPor: data.digitalizado_por,
+            votosCoalicion: data.votos_coalicion,
+            votosAlianza: data.votos_alianza,
+            votosUnidad: data.votos_unidad,
+            votosOtros: data.votos_otros,
+            votosBlanco: data.votos_blanco,
+            votosNulos: data.votos_nulos,
+            votosNoMarcados: data.votos_no_marcados,
+            totalVotosUrna: data.total_votos_urna,
+            estadoRevision: data.estado_revision,
+            fotoActaUrl: data.foto_acta_url,
+            leaderId: data.leader_id,
+          };
+        }
       } catch (e) {
         console.warn('Error sincronizando acta con Supabase:', e);
       }
     }
 
-    return res;
+    return nuevoMock;
   }
 
+  static async updateActaE14(id: string, updates: Partial<ActaE14>): Promise<ActaE14[]> {
+    const updatedMock = supabaseMock.updateActaE14(id, updates);
+
+    if (isSupabaseConfigured() && supabase) {
+      try {
+        const updatesDb: any = {};
+        if (updates.estadoRevision !== undefined) updatesDb.estado_revision = updates.estadoRevision;
+        if (updates.votosCoalicion !== undefined) updatesDb.votos_coalicion = updates.votosCoalicion;
+        if (updates.votosAlianza !== undefined) updatesDb.votos_alianza = updates.votosAlianza;
+        if (updates.votosUnidad !== undefined) updatesDb.votos_unidad = updates.votosUnidad;
+        if (updates.votosOtros !== undefined) updatesDb.votos_otros = updates.votosOtros;
+        if (updates.votosBlanco !== undefined) updatesDb.votos_blanco = updates.votosBlanco;
+        if (updates.votosNulos !== undefined) updatesDb.votos_nulos = updates.votosNulos;
+        if (updates.votosNoMarcados !== undefined) updatesDb.votos_no_marcados = updates.votosNoMarcados;
+        if (updates.totalVotosUrna !== undefined) updatesDb.total_votos_urna = updates.totalVotosUrna;
+        if (updates.fotoActaUrl !== undefined) updatesDb.foto_acta_url = updates.fotoActaUrl;
+        if (updates.leaderId !== undefined) updatesDb.leader_id = updates.leaderId;
+
+        await supabase.from('actas_e14').update(updatesDb).eq('id', id);
+      } catch (e) {
+        console.warn('Error actualizando acta en Supabase:', e);
+      }
+    }
+
+    return updatedMock;
+  }
+
+  // ---------------------------------------------------------------------
   // Alertas de Fraude
+  // ---------------------------------------------------------------------
   static async getAlertas(): Promise<AlertaFraude[]> {
     if (!isSupabaseConfigured() || !supabase) {
       return supabaseMock.getAlertas();
@@ -287,14 +457,60 @@ export class SupabaseService {
         descripcion: a.descripcion,
         timestamp: a.timestamp,
         resuelta: a.resuelta,
+        leaderId: a.leader_id || a.leaderId,
       }));
     } catch (err) {
       return supabaseMock.getAlertas();
     }
   }
 
-  static async resolveAlerta(id: string): Promise<void> {
-    supabaseMock.resolverAlerta(id);
+  static async saveAlertaFraude(alerta: Omit<AlertaFraude, 'id'>): Promise<AlertaFraude> {
+    const nuevoMock = supabaseMock.addAlertaFraude(alerta);
+
+    if (isSupabaseConfigured() && supabase) {
+      try {
+        const { data, error } = await supabase
+          .from('alertas_fraude')
+          .insert({
+            id: nuevoMock.id,
+            puesto_id: alerta.puestoId,
+            puesto_nombre: alerta.puestoNombre,
+            mesa_numero: alerta.mesaNumero,
+            severidad: alerta.severidad,
+            tipo: alerta.tipo,
+            descripcion: alerta.descripcion,
+            timestamp: alerta.timestamp,
+            resuelta: alerta.resuelta,
+            leader_id: alerta.leaderId,
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+        if (data) {
+          return {
+            id: data.id,
+            puestoId: data.puesto_id,
+            puestoNombre: data.puesto_nombre,
+            mesaNumero: data.mesa_numero,
+            severidad: data.severidad,
+            tipo: data.tipo,
+            descripcion: data.descripcion,
+            timestamp: data.timestamp,
+            resuelta: data.resuelta,
+            leaderId: data.leader_id,
+          };
+        }
+      } catch (e) {
+        console.warn('Error guardando alerta en Supabase:', e);
+      }
+    }
+
+    return nuevoMock;
+  }
+
+  static async resolverAlerta(id: string, metadata?: { leaderId?: string }): Promise<AlertaFraude[]> {
+    const updatedMock = supabaseMock.resolverAlerta(id, metadata);
 
     if (isSupabaseConfigured() && supabase) {
       try {
@@ -306,9 +522,13 @@ export class SupabaseService {
         console.warn('Error resolviendo alerta en Supabase:', e);
       }
     }
+
+    return updatedMock;
   }
 
+  // ---------------------------------------------------------------------
   // Partidos
+  // ---------------------------------------------------------------------
   static async getPartidos(): Promise<Partido[]> {
     if (!isSupabaseConfigured() || !supabase) {
       return supabaseMock.getPartidos();
@@ -357,7 +577,9 @@ export class SupabaseService {
     return nuevoMock;
   }
 
+  // ---------------------------------------------------------------------
   // Candidatos
+  // ---------------------------------------------------------------------
   static async getCandidatos(): Promise<Candidato[]> {
     if (!isSupabaseConfigured() || !supabase) {
       return supabaseMock.getCandidatos();
@@ -418,7 +640,9 @@ export class SupabaseService {
     return nuevoMock;
   }
 
-  // Actores
+  // ---------------------------------------------------------------------
+  // Actores (security actors)
+  // ---------------------------------------------------------------------
   static async getActors(): Promise<Actor[]> {
     if (!isSupabaseConfigured() || !supabase) {
       return supabaseMock.getActors();
@@ -499,7 +723,9 @@ export class SupabaseService {
     }
   }
 
+  // ---------------------------------------------------------------------
   // Suscripción en Tiempo Real (Supabase Realtime WebSockets)
+  // ---------------------------------------------------------------------
   static subscribeToRealtime(
     onNewActa: (acta: ActaE14) => void,
     onNewAlerta: (alerta: AlertaFraude) => void,
@@ -576,4 +802,3 @@ export class SupabaseService {
     };
   }
 }
-

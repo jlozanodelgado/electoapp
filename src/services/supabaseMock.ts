@@ -169,6 +169,12 @@ class SupabasePostGISMockService {
     return nuevo;
   }
 
+  updateActaE14(id: string, updates: Partial<ActaE14>): ActaE14[] {
+    const updated = this.getActasE14().map(a => (a.id === id ? { ...a, ...updates } : a));
+    this.setStorage(STORAGE_KEYS.ACTAS, updated);
+    return updated;
+  }
+
   // ---------------------------------------------------------------------
   // Alertas de fraude
   // ---------------------------------------------------------------------

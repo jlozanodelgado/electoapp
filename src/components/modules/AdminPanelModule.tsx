@@ -16,9 +16,11 @@ import {
   Search,
   UserPlus,
   Pencil,
+  Download,
 } from 'lucide-react';
+import { ImportarMasivoExcel } from '../modules/ImportarMasivoExcel';
 
-type AdminTab = 'partidos' | 'candidatos' | 'actores' | 'usuarios';
+type AdminTab = 'partidos' | 'candidatos' | 'actores' | 'usuarios' | 'importar';
 
 const ROLE_LABELS: Record<string, string> = {
   totalSupervisor: 'Supervisor Total',
@@ -103,6 +105,7 @@ export const AdminPanelModule: React.FC = () => {
     { id: 'candidatos', label: 'Candidatos', icon: <Building className="w-4 h-4" />, count: candidatos.length },
     { id: 'actores', label: 'Actores', icon: <Users className="w-4 h-4" />, count: actors.length },
     { id: 'usuarios', label: 'Usuarios Auth', icon: <UserPlus className="w-4 h-4" />, count: actors.length },
+    { id: 'importar', label: 'Importar Excel', icon: <Download className="w-4 h-4" />, count: 0 },
   ];
 
   return (
@@ -421,6 +424,12 @@ export const AdminPanelModule: React.FC = () => {
               Crear usuario con correo y contraseña
             </Button>
           </div>
+        </Card>
+      )}
+
+      {tab === 'importar' && (
+        <Card title="Importación Masiva por Excel" subtitle="Carga departamentos, municipios y puestos de votación desde un archivo Excel">
+          <ImportarMasivoExcel />
         </Card>
       )}
 

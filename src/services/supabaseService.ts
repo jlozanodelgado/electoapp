@@ -34,6 +34,25 @@ function normalizeActorRole(rawRole: unknown, nivel?: number | null): Actor['rol
   return 'voter';
 }
 
+/** Traduce los errores técnicos de PostgreSQL a mensajes entendibles. */
+function describeSupabaseError(message: string, tabla: string): string {
+  const lower = message.toLowerCase();
+
+  if (lower.includes('duplicate key') || lower.includes('unique constraint')) {
+    return `Ya existe un registro con esos datos en ${tabla}. Verifica que las siglas o la cédula no estén repetidas.`;
+  }
+  if (lower.includes('foreign key')) {
+    return 'El registro hace referencia a un partido, departamento o municipio que no existe en la base de datos.';
+  }
+  if (lower.includes('row-level security')) {
+    return `La base de datos rechazó la operación por permisos (RLS) en ${tabla}.`;
+  }
+  if (lower.includes('invalid input syntax for type uuid')) {
+    return 'Se generó un identificador inválido. Recarga la página e inténtalo de nuevo.';
+  }
+  return message;
+}
+
 export class SupabaseService {
   // ---------------------------------------------------------------------
   // Puestos (voting places)
@@ -597,7 +616,10 @@ export class SupabaseService {
           logo_url: nuevo.logoUrl,
         });
 
-        if (error) throw new Error(error.message);
+        if (error) {
+          console.error('[Supabase] Error guardando partido:', error.message);
+          throw new Error(describeSupabaseError(error.message, 'partidos'));
+        }
       } catch (e) {
         console.error('[Supabase] Error guardando partido:', e);
         throw e;
@@ -668,7 +690,10 @@ export class SupabaseService {
           foto_url: nuevo.fotoUrl,
         });
 
-        if (error) throw new Error(error.message);
+        if (error) {
+          console.error('[Supabase] Error guardando candidato:', error.message);
+          throw new Error(describeSupabaseError(error.message, 'candidatos'));
+        }
       } catch (e) {
         console.error('[Supabase] Error guardando candidato:', e);
         throw e;

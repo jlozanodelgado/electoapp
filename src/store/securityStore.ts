@@ -140,7 +140,22 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
       dbUpdates.rol = rolDb;
       dbUpdates.nivel = ROLE_TO_NIVEL[updates.role];
     }
-    if (updates.candidatoId !== undefined) dbUpdates.candidato_id = updates.candidatoId || null;
+
+    // Un Supervisor de Candidato siempre debe tener un candidato válido.
+    if (updates.role === 'candidateSupervisor' && !updates.candidatoId) {
+      throw new Error(
+        'Un Supervisor de Candidato debe estar asignado a un candidato. Selecciona uno antes de guardar.',
+      );
+    }
+
+    if (updates.candidatoId !== undefined) {
+      dbUpdates.candidato_id = updates.candidatoId || null;
+    }
+
+    // Si el actor deja de ser Supervisor de Candidato, se desvincula del candidato.
+    if (updates.role !== undefined && updates.role !== 'candidateSupervisor') {
+      dbUpdates.candidato_id = null;
+    }
     if (updates.supervisorId !== undefined) dbUpdates.supervisor_id = updates.supervisorId || null;
     if (updates.leaderId !== undefined) dbUpdates.leader_id = updates.leaderId || null;
     if (updates.scopeLevel !== undefined) dbUpdates.scope_level = updates.scopeLevel || null;

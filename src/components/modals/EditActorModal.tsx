@@ -82,6 +82,12 @@ export const EditActorModal: React.FC<Props> = ({ actor }) => {
     e.preventDefault();
     if (!nombre || !role) return;
 
+    // Un Supervisor de Candidato siempre debe ir amarrado a un candidato existente.
+    if (role === 'candidateSupervisor' && !candidatoId) {
+      setError('Un Supervisor de Candidato debe estar asignado a un candidato. Selecciona uno de la lista.');
+      return;
+    }
+
     setSaving(true);
     setError(null);
 
@@ -91,7 +97,7 @@ export const EditActorModal: React.FC<Props> = ({ actor }) => {
         role,
         scopeLevel: scopeLevel || undefined,
         scopeId: scopeId || undefined,
-        candidatoId: candidatoId || undefined,
+        candidatoId: role === 'candidateSupervisor' ? candidatoId : undefined,
         supervisorId: supervisorId || undefined,
         leaderId: leaderId || undefined,
       });
@@ -200,17 +206,25 @@ export const EditActorModal: React.FC<Props> = ({ actor }) => {
           </div>
 
           <div>
-            <label className="text-slate-400 block mb-1 font-medium">Candidato asignado (opcional)</label>
+            <label className="text-slate-400 block mb-1 font-medium">
+              {role === 'candidateSupervisor' ? 'Candidato asignado *' : 'Candidato asignado (opcional)'}
+            </label>
             <select
               value={candidatoId}
               onChange={(e) => setCandidatoId(e.target.value)}
               className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:outline-none focus:border-emerald-500"
+              disabled={candidatosDisponibles.length === 0}
             >
               <option value="">Ninguno</option>
               {candidatosDisponibles.map((c) => (
                 <option key={c.id} value={c.id}>{c.nombre}</option>
               ))}
             </select>
+            {role === 'candidateSupervisor' && candidatosDisponibles.length === 0 && (
+              <p className="text-[10px] text-rose-400 mt-1">
+                No hay partidos registrados. Crea un partido y un candidato antes de asignar este rol.
+              </p>
+            )}
           </div>
 
           <div>
@@ -254,7 +268,11 @@ export const EditActorModal: React.FC<Props> = ({ actor }) => {
               type="submit"
               variant="primary"
               size="sm"
-              disabled={!nombre || saving}
+              disabled={
+                !nombre ||
+                saving ||
+                (role === 'candidateSupervisor' && !candidatoId)
+              }
               icon={<Shield className="w-4 h-4" />}
             >
               {saving ? 'Guardando…' : 'Guardar Cambios'}

@@ -6,6 +6,7 @@ import { MapViewerModule } from './components/modules/MapViewerModule';
 import { CampaignCommandModule } from './components/modules/CampaignCommandModule';
 import { DayDModule } from './components/modules/DayDModule';
 import { ExecutiveDashboardModule } from './components/modules/ExecutiveDashboardModule';
+import { AdminPanelModule } from './components/modules/AdminPanelModule';
 import { NewWitnessModal } from './components/modals/NewWitnessModal';
 import { NewVoterModal } from './components/modals/NewVoterModal';
 import { CandidatosModule } from './components/modules/CandidatosModule';
@@ -101,6 +102,7 @@ export const App: React.FC = () => {
               {moduloActivo === 'preparacion' && <PreparacionModule />}
               {moduloActivo === 'dia_d' && <DayDModule />}
               {moduloActivo === 'ejecutivo' && <ExecutiveDashboardModule />}
+              {moduloActivo === 'admin' && <AdminPanelModule />}
 
               {isMobile && (
                 <div className="absolute bottom-6 right-6 flex flex-col gap-2 z-50">

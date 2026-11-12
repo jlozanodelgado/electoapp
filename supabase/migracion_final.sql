@@ -1,0 +1,1 @@
+-- Migracion RLS - Ejecutar en Supabase SQL Editor

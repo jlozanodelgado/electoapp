@@ -14,7 +14,8 @@ import {
   CheckCircle2,
   Clock,
   User,
-  Home
+  Home,
+  Shield
 } from 'lucide-react';
 
 export const Sidebar: React.FC = () => {
@@ -24,7 +25,8 @@ export const Sidebar: React.FC = () => {
 
   const isTestigo = actorRole === 'testigo';
   const isLider = actorRole === 'leader';
-  const isSupervisor = actorRole === 'supervisor_total' || actorRole === 'supervisor_candidato';
+  const isSupervisor = actorRole === 'totalSupervisor' || actorRole === 'candidateSupervisor';
+  const isTotalSupervisor = actorRole === 'totalSupervisor';
 
   const allNavItems: Array<{ id: ModuloActivo; label: string; desc: string; icon: React.ReactNode }> = [
     {
@@ -73,7 +75,17 @@ export const Sidebar: React.FC = () => {
 
   // Filtro de módulos por rol
   let navItems = allNavItems;
-  if (isTestigo) {
+  if (isTotalSupervisor) {
+    navItems = [
+      ...allNavItems,
+      {
+        id: 'admin' as ModuloActivo,
+        label: 'Administración',
+        desc: 'Gestión total del sistema',
+        icon: <Shield className="w-5 h-5" />,
+      },
+    ];
+  } else if (isTestigo) {
     navItems = allNavItems.filter(i => i.id === 'mapa' || i.id === 'dia_d');
   } else if (isLider) {
     navItems = allNavItems.filter(i => i.id !== 'ejecutivo');

@@ -1,0 +1,1 @@
+-- Migracion RLS ElectoApp - Ejecutar en Supabase SQL Editor

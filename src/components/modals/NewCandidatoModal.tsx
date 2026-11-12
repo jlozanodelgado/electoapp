@@ -1,10 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useElectoralStore } from '../../store/electoralStore';
 import { Button } from '../ui/Button';
-import { X, User, Building, ImageOff } from 'lucide-react';
+import { X, User, Building, ImageOff, Flag } from 'lucide-react';
 
 export const NewCandidatoModal: React.FC = () => {
-  const { candidatos, partidos, addCandidato, setIsNewCandidatoOpen } = useElectoralStore();
+  const {
+    isNewCandidatoOpen,
+    candidatos,
+    partidos,
+    addCandidato,
+    setIsNewCandidatoOpen,
+    setIsNewPartidoOpen,
+  } = useElectoralStore();
   const [partidoId, setPartidoId] = useState('');
   const [nombre, setNombre] = useState('');
   const [apellido, setApellido] = useState('');
@@ -67,7 +74,9 @@ export const NewCandidatoModal: React.FC = () => {
   }, [partidos, partidoId]);
 
   // Todos los hooks deben ejecutarse antes de cualquier retorno condicional.
-  if (!partidos || partidos.length === 0) return null;
+  if (!isNewCandidatoOpen) return null;
+
+  const sinPartidos = !partidos || partidos.length === 0;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -136,6 +145,41 @@ export const NewCandidatoModal: React.FC = () => {
           </button>
         </div>
 
+        {sinPartidos ? (
+          <div className="p-5 text-center space-y-4">
+            <div className="w-12 h-12 rounded-full bg-amber-500/15 border border-amber-500/30 flex items-center justify-center mx-auto">
+              <Flag className="w-6 h-6 text-amber-400" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-white">Primero registra un partido</p>
+              <p className="text-xs text-slate-400 mt-1">
+                Todo candidato debe estar inscrito por un partido político.
+              </p>
+            </div>
+            <div className="flex justify-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setIsNewCandidatoOpen(false)}
+              >
+                Cerrar
+              </Button>
+              <Button
+                type="button"
+                variant="primary"
+                size="sm"
+                icon={<Flag className="w-4 h-4" />}
+                onClick={() => {
+                  setIsNewCandidatoOpen(false);
+                  setIsNewPartidoOpen(true);
+                }}
+              >
+                Crear Partido
+              </Button>
+            </div>
+          </div>
+        ) : (
         <form onSubmit={handleSubmit} className="p-4 space-y-3.5 text-xs">
           <div>
             <label className="text-slate-400 block mb-1 font-medium">Partido Político</label>
@@ -331,6 +375,7 @@ export const NewCandidatoModal: React.FC = () => {
             </Button>
           </div>
         </form>
+        )}
       </div>
     </div>
   );

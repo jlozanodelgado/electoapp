@@ -1,6 +1,6 @@
 import { supabase, isSupabaseConfigured } from './supabaseClient';
 import { supabaseMock } from './supabaseMock';
-import { generateUuid } from '../utils/uuid';
+import { generateUuid, isUuid } from '../utils/uuid';
 import { 
   PuestoVotacion, 
   TestigoElectoral, 
@@ -35,22 +35,50 @@ function normalizeActorRole(rawRole: unknown, nivel?: number | null): Actor['rol
 }
 
 /** Traduce los errores técnicos de PostgreSQL a mensajes entendibles. */
-function describeSupabaseError(message: string, tabla: string): string {
-  const lower = message.toLowerCase();
+function describeSupabaseError(
+  error: { message?: string | null; details?: string | null; hint?: string | null; code?: string },
+  tabla: string,
+): string {
+  const message = error.message ?? '';
+  const details = error.details ?? '';
+  const hint = error.hint ?? '';
+  const full = `${message} ${details} ${hint}`;
+  const lower = full.toLowerCase();
 
-  if (lower.includes('duplicate key') || lower.includes('unique constraint')) {
+  // Violación de unicidad (cédula, siglas, etc.).
+  const duplicate = /Key \(([^)]+)\)=\(([^)]*)\) already exists/i.exec(details);
+  if (error.code === '23505' || lower.includes('duplicate key') || lower.includes('unique constraint')) {
+    if (duplicate) {
+      return `Ya existe un registro en ${tabla} con ${duplicate[1]} = "${duplicate[2]}". Usa otro valor.`;
+    }
     return `Ya existe un registro con esos datos en ${tabla}. Verifica que las siglas o la cédula no estén repetidas.`;
   }
-  if (lower.includes('foreign key')) {
+
+  // Violación de llave foránea: Postgres indica el campo, el valor y la tabla faltante.
+  const fk = /Key \(([^)]+)\)=\(([^)]*)\) is not present in table "([^"]+)"/i.exec(details);
+  if (error.code === '23503' || lower.includes('foreign key')) {
+    if (fk) {
+      return `El valor "${fk[2]}" del campo ${fk[1]} no existe en la tabla ${fk[3]}. Verifica la selección o crea ese registro primero.`;
+    }
     return 'El registro hace referencia a un partido, departamento o municipio que no existe en la base de datos.';
   }
-  if (lower.includes('row-level security') || lower.includes('permission denied')) {
+
+  if (error.code === '42501' || lower.includes('row-level security') || lower.includes('permission denied')) {
     return `Tu usuario no tiene permisos para escribir en ${tabla}. Pide al administrador que ejecute supabase/fix_rls_permissions.sql en el SQL Editor de Supabase.`;
   }
-  if (lower.includes('invalid input syntax for type uuid')) {
+
+  if (error.code === '22P02' || lower.includes('invalid input syntax for type uuid')) {
     return 'Se generó un identificador inválido. Recarga la página e inténtalo de nuevo.';
   }
-  return message;
+
+  // La tabla no tiene una columna que la app espera (esquema desactualizado).
+  const missingColumn =
+    /Could not find the '([^']+)' column/i.exec(message) ?? /column "([^"]+)" of relation/i.exec(message);
+  if (error.code === 'PGRST204' || missingColumn) {
+    return `La tabla ${tabla} no tiene la columna${missingColumn ? ` "${missingColumn[1]}"` : ''} que espera la aplicación. Actualiza el esquema de la base de datos.`;
+  }
+
+  return message || `No se pudo guardar el registro en ${tabla}.`;
 }
 
 export class SupabaseService {
@@ -618,7 +646,7 @@ export class SupabaseService {
 
         if (error) {
           console.error('[Supabase] Error guardando partido:', error.message);
-          throw new Error(describeSupabaseError(error.message, 'partidos'));
+          throw new Error(describeSupabaseError(error, 'partidos'));
         }
       } catch (e) {
         console.error('[Supabase] Error guardando partido:', e);
@@ -668,11 +696,20 @@ export class SupabaseService {
   }
 
   static async saveCandidato(candidato: Omit<Candidato, 'id' | 'creadoEn'>): Promise<Candidato> {
+    const cedula = String(candidato.cedula ?? '').replace(/\D/g, '');
+
     const nuevo: Candidato = {
       ...candidato,
+      // Se guardan solo los dígitos para que "1.234.567" y "1234567" no se
+      // traten como cédulas distintas al validar la restricción UNIQUE.
+      cedula: cedula || String(candidato.cedula ?? ''),
       id: generateUuid(),
       creadoEn: new Date().toISOString(),
     };
+
+    if (!isUuid(nuevo.partidoId)) {
+      throw new Error('Selecciona un partido válido antes de guardar el candidato.');
+    }
 
     if (isSupabaseConfigured() && supabase) {
       try {
@@ -692,7 +729,7 @@ export class SupabaseService {
 
         if (error) {
           console.error('[Supabase] Error guardando candidato:', error.message);
-          throw new Error(describeSupabaseError(error.message, 'candidatos'));
+          throw new Error(describeSupabaseError(error, 'candidatos'));
         }
       } catch (e) {
         console.error('[Supabase] Error guardando candidato:', e);

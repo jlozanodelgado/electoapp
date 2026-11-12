@@ -9,7 +9,9 @@ import {
   AlertaFraude,
   Partido,
   Candidato,
-  Actor
+  Actor,
+  Departamento,
+  Municipio,
 } from '../types/electoral';
 
 /**
@@ -634,6 +636,73 @@ export class SupabaseService {
       }));
     } catch (err) {
       return supabaseMock.getPartidos();
+    }
+  }
+
+  // ---------------------------------------------------------------------
+  // Departamentos y Municipios (lectura desde Supabase)
+  // ---------------------------------------------------------------------
+  static async getDepartamentos(): Promise<Departamento[]> {
+    if (!isSupabaseConfigured() || !supabase) {
+      return supabaseMock.getDepartamentos();
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('departamentos')
+        .select('*')
+        .order('nombre');
+
+      if (error || !data || data.length === 0) {
+        return supabaseMock.getDepartamentos();
+      }
+
+      return data.map((d: any) => ({
+        id: d.id,
+        nombre: d.nombre,
+        codigo: d.codigo,
+        censo: d.censo,
+        curules: d.curules,
+        coordenadas: [d.lat, d.lng],
+        zoom: d.zoom,
+        partidoDominante: d.partido_dominante,
+        participacionPct: d.participacion_pct,
+      }));
+    } catch (err) {
+      return supabaseMock.getDepartamentos();
+    }
+  }
+
+  static async getMunicipios(): Promise<Municipio[]> {
+    if (!isSupabaseConfigured() || !supabase) {
+      return supabaseMock.getMunicipios();
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('municipios')
+        .select('*')
+        .order('nombre');
+
+      if (error || !data || data.length === 0) {
+        return supabaseMock.getMunicipios();
+      }
+
+      return data.map((m: any) => ({
+        id: m.id,
+        departamentoId: m.departamento_id,
+        nombre: m.nombre,
+        codigo: m.codigo,
+        censo: m.censo,
+        curules: m.curules,
+        coordenadas: [m.lat, m.lng],
+        zoom: m.zoom,
+        zonas: m.zonas || [],
+        partidoDominante: m.partido_dominante,
+        participacionPct: m.participacion_pct,
+      }));
+    } catch (err) {
+      return supabaseMock.getMunicipios();
     }
   }
 

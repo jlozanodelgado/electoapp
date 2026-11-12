@@ -9,7 +9,9 @@ import {
   AlertaFraude,
   Partido,
   Candidato,
-  Actor
+  Actor,
+  Departamento,
+  Municipio,
 } from '../types/electoral';
 import { Toast, CuadranteTactico, TipoBasemap } from '../types/tactical';
 import { isPointInPolygon } from '../utils/geoUtils';
@@ -60,6 +62,8 @@ interface ElectoralState {
   // Colecciones de datos jerárquicos
   partidos: Partido[];
   candidatos: Candidato[];
+  departamentos: Departamento[];
+  municipios: Municipio[];
   actors: Actor[];
   puestos: PuestoVotacion[];
   testigos: TestigoElectoral[];
@@ -182,6 +186,8 @@ export const useElectoralStore = create<ElectoralState>((set, get) => ({
 
   partidos: [],
   candidatos: [],
+  departamentos: [],
+  municipios: [],
   actors: [],
   puestos: supabaseMock.getPuestos(),
   testigos: supabaseMock.getTestigos(),
@@ -438,9 +444,11 @@ export const useElectoralStore = create<ElectoralState>((set, get) => ({
 
   // Carga inicial de datos jerárquicos
   loadHierarchicalData: async () => {
-    const [partidos, candidatos, actors, puestos, testigos, votantes, actas, alertas] = await Promise.all([
+    const [partidos, candidatos, departamentos, municipios, actors, puestos, testigos, votantes, actas, alertas] = await Promise.all([
       SupabaseService.getPartidos(),
       SupabaseService.getCandidatos(),
+      SupabaseService.getDepartamentos(),
+      SupabaseService.getMunicipios(),
       SupabaseService.getActors(),
       SupabaseService.getPuestos(),
       SupabaseService.getTestigos(),
@@ -448,7 +456,7 @@ export const useElectoralStore = create<ElectoralState>((set, get) => ({
       SupabaseService.getActasE14(),
       SupabaseService.getAlertas(),
     ]);
-    set({ partidos, candidatos, actors, puestos, testigos, votantes, actas, alertas });
+    set({ partidos, candidatos, departamentos, municipios, actors, puestos, testigos, votantes, actas, alertas });
   },
 
   setIsNewWitnessOpen: (open) => set({ isNewWitnessOpen: open, editingTestigo: null }),

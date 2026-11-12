@@ -4,8 +4,8 @@ import { useElectoralStore } from '../../store/electoralStore';
 import { Actor } from '../../types/security';
 import { Candidato } from '../../types/electoral';
 import { Partido } from '../../types/electoral';
-import { DEPARTAMENTOS, MUNICIPIOS } from '../../data/mockElectoralData';
 import { X, UserPlus, Shield, Check, AlertCircle, MapPin, Building, Users, Flag } from 'lucide-react';
+import { DEPARTAMENTOS as MOCK_DEPARTAMENTOS, MUNICIPIOS as MOCK_MUNICIPIOS } from '../../data/mockElectoralData';
 
 interface Props {
   isOpen: boolean;
@@ -16,7 +16,7 @@ type ScopeLevel = 'national' | 'department' | 'municipality';
 
 export const CreateUserModal: React.FC<Props> = ({ isOpen, onClose }) => {
   const { registerUser, currentActor, actors } = useSecurityStore();
-  const { partidos, candidatos } = useElectoralStore();
+  const { partidos, candidatos, departamentos, municipios } = useElectoralStore();
   const actorActivo = currentActor();
   const isSupervisorTotal = actorActivo?.role === 'totalSupervisor';
   const isCandidateSupervisor = actorActivo?.role === 'candidateSupervisor';
@@ -75,8 +75,10 @@ export const CreateUserModal: React.FC<Props> = ({ isOpen, onClose }) => {
   // Líderes disponibles para amarrar testigos y votantes
   const lideresDisponibles = actors.filter((a: Actor) => a.role === 'leader');
 
-  // Municipios filtrados por departamento
-  const municipiosFiltrados = MUNICIPIOS.filter(m => m.departamentoId === departamentoId);
+  // Departamentos y municipios desde Supabase (con fallback al mock inicial)
+  const departamentosDisponibles = departamentos.length > 0 ? departamentos : MOCK_DEPARTAMENTOS;
+  const municipiosDisponiblesStore = municipios.length > 0 ? municipios : MOCK_MUNICIPIOS;
+  const municipiosFiltrados = municipiosDisponiblesStore.filter(m => m.departamentoId === departamentoId);
 
   // Reglas de visibilidad y obligatoriedad por rol
   const mostrarPartido = rol === 'candidateSupervisor' || rol === 'leader';
@@ -365,14 +367,14 @@ export const CreateUserModal: React.FC<Props> = ({ isOpen, onClose }) => {
                 value={departamentoId}
                 onChange={(e) => {
                   setDepartamentoId(e.target.value);
-                  const firstMun = MUNICIPIOS.find(m => m.departamentoId === e.target.value);
+                  const firstMun = municipiosDisponiblesStore.find(m => m.departamentoId === e.target.value);
                   if (firstMun) setMunicipioId(firstMun.id);
                   else setMunicipioId('');
                 }}
                 className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
               >
                 <option value="">Seleccionar departamento</option>
-                {DEPARTAMENTOS.map((d) => (
+                {departamentosDisponibles.map((d) => (
                   <option key={d.id} value={d.id}>
                     {d.nombre} (Cód. {d.codigo})
                   </option>

@@ -7,6 +7,8 @@ import {
   Partido,
   Candidato,
   Actor,
+  Departamento,
+  Municipio,
 } from '../types/electoral';
 import {
   PUESTOS_VOTACION,
@@ -14,6 +16,8 @@ import {
   VOTANTES_INICIALES,
   ACTAS_E14_INICIALES,
   ALERTAS_FRAUDE_INICIALES,
+  DEPARTAMENTOS,
+  MUNICIPIOS,
 } from '../data/mockElectoralData';
 import { generateUuid } from '../utils/uuid';
 
@@ -256,6 +260,15 @@ class SupabasePostGISMockService {
     const updated = this.getActors().map(a => (a.id === id ? { ...a, ...updates } : a));
     this.setStorage(ACTORS_KEY, updated);
     return updated;
+  }
+
+  // Departamentos y Municipios
+  getDepartamentos(): Departamento[] {
+    return DEPARTAMENTOS;
+  }
+
+  getMunicipios(): Municipio[] {
+    return MUNICIPIOS;
   }
 
   // Partidos

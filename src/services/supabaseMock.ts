@@ -9,6 +9,7 @@ import {
   Actor,
   Departamento,
   Municipio,
+  Zona,
 } from '../types/electoral';
 import {
   PUESTOS_VOTACION,
@@ -269,6 +270,10 @@ class SupabasePostGISMockService {
 
   getMunicipios(): Municipio[] {
     return MUNICIPIOS;
+  }
+
+  getZonas(): Zona[] {
+    return [];
   }
 
   // Partidos

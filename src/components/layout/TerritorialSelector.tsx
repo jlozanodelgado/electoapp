@@ -17,16 +17,18 @@ export const TerritorialSelector: React.FC = () => {
     puestos,
     departamentos,
     municipios,
+    zonas,
   } = useElectoralStore();
 
   const departamentosDisponibles = departamentos.length > 0 ? departamentos : MOCK_DEPARTAMENTOS;
   const municipiosDisponiblesStore = municipios.length > 0 ? municipios : MOCK_MUNICIPIOS;
+  const zonasDisponiblesStore = zonas.length > 0 ? zonas : [];
   const municipiosDisponibles = departamentoId === 'todos' 
     ? municipiosDisponiblesStore 
     : municipiosDisponiblesStore.filter(m => m.departamentoId === departamentoId);
 
   const municipioActual = municipiosDisponiblesStore.find(m => m.id === municipioId);
-  const zonasDisponibles = municipioActual ? municipioActual.zonas : [];
+  const zonasDisponibles = zonasDisponiblesStore.filter(z => z.municipio_id === municipioId);
 
   const puestoActual = puestos.find(p => p.id === selectedPuestoId);
 
@@ -88,7 +90,7 @@ export const TerritorialSelector: React.FC = () => {
             >
               <option value="todas">Todas las Zonas</option>
               {zonasDisponibles.map(z => (
-                <option key={z} value={z}>{z}</option>
+                <option key={z.id} value={z.id}>{z.nombre}</option>
               ))}
             </select>
           </div>

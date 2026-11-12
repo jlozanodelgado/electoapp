@@ -12,6 +12,7 @@ import {
   Actor,
   Departamento,
   Municipio,
+  Zona,
 } from '../types/electoral';
 
 /**
@@ -703,6 +704,39 @@ export class SupabaseService {
       }));
     } catch (err) {
       return supabaseMock.getMunicipios();
+    }
+  }
+
+  // ---------------------------------------------------------------------
+  // Zonas (tabla separada, escalable)
+  // ---------------------------------------------------------------------
+  static async getZonas(): Promise<Zona[]> {
+    if (!isSupabaseConfigured() || !supabase) {
+      return supabaseMock.getZonas();
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('zonas')
+        .select('*')
+        .order('municipio_id, nombre');
+
+      if (error || !data || data.length === 0) {
+        return supabaseMock.getZonas();
+      }
+
+      return data.map((z: any) => ({
+        id: z.id,
+        municipio_id: z.municipio_id,
+        nombre: z.nombre,
+        codigo: z.codigo,
+        censo: z.censo,
+        lat: z.lat,
+        lng: z.lng,
+        creadoEn: z.creado_en,
+      }));
+    } catch (err) {
+      return supabaseMock.getZonas();
     }
   }
 

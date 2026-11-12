@@ -77,6 +77,17 @@ export interface Municipio {
   participacionPct: number;
 }
 
+export interface Zona {
+  id: string;
+  municipio_id: string;
+  nombre: string;
+  codigo?: string;
+  censo?: number;
+  lat?: number;
+  lng?: number;
+  creadoEn?: string;
+}
+
 export interface Partido {
   id: string;
   nombre: string;

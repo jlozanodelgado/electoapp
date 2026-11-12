@@ -76,6 +76,17 @@ class SupabasePostGISMockService {
     }
   }
 
+  /**
+   * Descarta registros antiguos cuyos IDs no son UUID (por ejemplo
+   * `partido-123...`), ya que PostgreSQL los rechaza en columnas UUID.
+   */
+  private isUuid(value: unknown): boolean {
+    return (
+      typeof value === 'string' &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
+    );
+  }
+
   // Users – authentication mock
   getUsers(): User[] {
     return getStoredUsers();
@@ -203,7 +214,10 @@ class SupabasePostGISMockService {
   getActors(): any[] {
     try {
       const saved = localStorage.getItem(ACTORS_KEY);
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const list = JSON.parse(saved) as any[];
+        return list.filter(a => this.isUuid(a?.id));
+      }
     } catch (e) {
       console.warn('LocalStorage error for actors', e);
     }
@@ -246,7 +260,7 @@ class SupabasePostGISMockService {
 
   // Partidos
   getPartidos(): Partido[] {
-    return this.getStorage(STORAGE_KEYS.PARTIDOS, []);
+    return this.getStorage<Partido[]>(STORAGE_KEYS.PARTIDOS, []).filter(p => this.isUuid(p.id));
   }
 
   addPartido(partido: Partido): Partido {
@@ -259,7 +273,7 @@ class SupabasePostGISMockService {
 
   // Candidatos
   getCandidatos(): Candidato[] {
-    return this.getStorage(STORAGE_KEYS.CANDIDATOS, []);
+    return this.getStorage<Candidato[]>(STORAGE_KEYS.CANDIDATOS, []).filter(c => this.isUuid(c.id));
   }
 
   addCandidato(candidato: Candidato): Candidato {

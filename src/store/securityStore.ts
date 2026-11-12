@@ -59,6 +59,7 @@ export interface RegisterUserData {
   scopeLevel?: ScopeLevel;
   scopeId?: string;
   candidatoId?: string;
+  supervisorId?: string;
   leaderId?: string;
 }
 
@@ -306,6 +307,7 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
       scopeLevel: data.scopeLevel,
       scopeId: data.scopeId,
       candidatoId: data.candidatoId,
+      supervisorId: data.supervisorId,
       leaderId: data.leaderId,
       user_id: createdAuthUser?.id,
     };

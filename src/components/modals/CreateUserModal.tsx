@@ -1,23 +1,27 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useSecurityStore } from '../../store/securityStore';
+import { useElectoralStore } from '../../store/electoralStore';
 import { Actor } from '../../types/security';
+import { Candidato } from '../../types/electoral';
+import { Partido } from '../../types/electoral';
 import { DEPARTAMENTOS, MUNICIPIOS } from '../../data/mockElectoralData';
-import { X, UserPlus, Shield, Check, AlertCircle, MapPin } from 'lucide-react';
+import { X, UserPlus, Shield, Check, AlertCircle, MapPin, Building, Users, Flag } from 'lucide-react';
 
 interface Props {
   isOpen: boolean;
   onClose: () => void;
 }
 
+type ScopeLevel = 'national' | 'department' | 'municipality';
+
 export const CreateUserModal: React.FC<Props> = ({ isOpen, onClose }) => {
-  const { registerUser, currentActor } = useSecurityStore();
+  const { registerUser, currentActor, actors } = useSecurityStore();
+  const { partidos, candidatos } = useElectoralStore();
   const actorActivo = currentActor();
   const isSupervisorTotal = actorActivo?.role === 'totalSupervisor';
   const isCandidateSupervisor = actorActivo?.role === 'candidateSupervisor';
 
   // Determinamos los roles que este usuario puede otorgar según la jerarquía
-  // totalSupervisor -> puede crear candidateSupervisor, leader, witness, voter
-  // candidateSupervisor -> solo puede crear leader, witness, voter (debajo de él)
   const allowedRoles: Array<{ value: Actor['role']; label: string; desc: string }> = isSupervisorTotal
     ? [
         { value: 'candidateSupervisor', label: 'Supervisor de Candidato', desc: 'Gestiona un candidato y su territorio' },
@@ -36,46 +40,103 @@ export const CreateUserModal: React.FC<Props> = ({ isOpen, onClose }) => {
   const [password, setPassword] = useState('');
   const [rol, setRol] = useState<Actor['role']>(allowedRoles[0]?.value || 'leader');
 
-  // Amarre territorial
-  const [departamentoId, setDepartamentoId] = useState<string>(
-    actorActivo?.scopeLevel === 'department' ? actorActivo.scopeId || 'valle' : 'valle'
-  );
-  const [municipioId, setMunicipioId] = useState<string>(
-    actorActivo?.scopeLevel === 'municipality' ? actorActivo.scopeId || 'tulua' : 'tulua'
-  );
+  // Campos condicionales
+  const [partidoId, setPartidoId] = useState('');
+  const [candidatoId, setCandidatoId] = useState('');
+  const [departamentoId, setDepartamentoId] = useState('');
+  const [municipioId, setMunicipioId] = useState('');
+  const [supervisorId, setSupervisorId] = useState('');
+  const [leaderId, setLeaderId] = useState('');
 
   const [loading, setLoading] = useState(false);
   const [statusMsg, setStatusMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   if (!isOpen) return null;
 
-  // Municipios filtrados por el departamento seleccionado
+  // Candidatos disponibles, opcionalmente filtrados por partido
+  const candidatosDisponibles = candidatos.filter(c =>
+    partidoId ? c.partidoId === partidoId : true
+  ).map(c => {
+    const p = partidos.find(p => p.id === c.partidoId);
+    return {
+      id: c.id,
+      nombre: `${c.nombre} ${c.apellido || ''} – ${p?.nombre ?? 'Sin partido'} (${p?.siglas ?? '-'})`,
+      cargo: c.cargo,
+      partidoId: c.partidoId,
+    };
+  });
+
+  // Candidato seleccionado (para leer su cargo)
+  const candidatoSeleccionado = candidatos.find(c => c.id === candidatoId);
+
+  // Supervisores disponibles (candidateSupervisors) para amarrar un líder
+  const supervisoresDisponibles = actors.filter((a: Actor) => a.role === 'candidateSupervisor');
+
+  // Líderes disponibles para amarrar testigos y votantes
+  const lideresDisponibles = actors.filter((a: Actor) => a.role === 'leader');
+
+  // Municipios filtrados por departamento
   const municipiosFiltrados = MUNICIPIOS.filter(m => m.departamentoId === departamentoId);
+
+  // Reglas de visibilidad y obligatoriedad por rol
+  const mostrarPartido = rol === 'candidateSupervisor' || rol === 'leader';
+  const mostrarCandidato = rol === 'candidateSupervisor' || rol === 'leader';
+  const mostrarDepartamento = rol === 'leader' || (candidatoSeleccionado?.cargo && candidatoSeleccionado.cargo !== 'presidente');
+  const mostrarMunicipio = rol === 'leader' || rol === 'witness' || rol === 'voter' || (candidatoSeleccionado?.cargo && !['gobernacion', 'asamblea_departamental'].includes(candidatoSeleccionado.cargo));
+  const mostrarSupervisor = rol === 'leader';
+  const mostrarLider = rol === 'witness' || rol === 'voter';
+
+  // Determinar scopeLevel y scopeId para el registro
+  const computeScope = (): { scopeLevel: ScopeLevel; scopeId: string } => {
+    if (rol === 'leader' || rol === 'witness' || rol === 'voter') {
+      return { scopeLevel: 'municipality', scopeId: municipioId || '' };
+    }
+    if (rol === 'candidateSupervisor') {
+      if (municipioId) return { scopeLevel: 'municipality', scopeId: municipioId };
+      if (departamentoId) return { scopeLevel: 'department', scopeId: departamentoId };
+      return { scopeLevel: 'national', scopeId: '' };
+    }
+    return { scopeLevel: 'national', scopeId: '' };
+  };
+
+  const camposFaltantes = (): string | null => {
+    if (!nombre.trim()) return 'El nombre completo es obligatorio.';
+    if (!email.trim()) return 'El correo electrónico es obligatorio.';
+    if (!password) return 'La contraseña es obligatoria.';
+    if (!rol) return 'El rol es obligatorio.';
+
+    if (mostrarPartido && !partidoId) return 'Debe seleccionar un partido.';
+    if (mostrarCandidato && !candidatoId) return 'Debe seleccionar un candidato.';
+    if (mostrarDepartamento && !departamentoId) return 'Debe seleccionar un departamento.';
+    if (mostrarMunicipio && !municipioId) return 'Debe seleccionar un municipio.';
+    if (mostrarSupervisor && !supervisorId) return 'Debe seleccionar un supervisor.';
+    if (mostrarLider && !leaderId) return 'Debe seleccionar un líder responsable.';
+
+    return null;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setStatusMsg(null);
 
+    const falta = camposFaltantes();
+    if (falta) {
+      setStatusMsg({ type: 'error', text: falta });
+      setLoading(false);
+      return;
+    }
+
     try {
-      // Determinamos el scopeLevel y scopeId según el rol
-      let scopeLevel: 'national' | 'department' | 'municipality' = 'municipality';
-      let scopeId = municipioId;
+      const { scopeLevel, scopeId } = computeScope();
 
-      if (rol === 'candidateSupervisor') {
-        // Puede ser departamental o municipal según se elija
-        scopeLevel = 'department';
-        scopeId = departamentoId;
-      } else {
-        // Líderes, Testigos y Votantes siempre amarrados a un Municipio
-        scopeLevel = 'municipality';
-        scopeId = municipioId;
-      }
-
-      // Si quien crea es un candidateSupervisor, se hereda su candidatoId
-      const candidatoId = isCandidateSupervisor
+      // Si quien crea es un candidateSupervisor, se hereda su candidatoId si no se seleccionó otro
+      const finalCandidatoId = isCandidateSupervisor && !candidatoId
         ? actorActivo?.candidatoId || actorActivo?.id
-        : undefined;
+        : candidatoId || undefined;
+
+      // Un líder debe reportar a un supervisor (candidateSupervisor)
+      const finalSupervisorId = rol === 'leader' ? supervisorId : undefined;
 
       const result = await registerUser({
         nombre,
@@ -84,18 +145,27 @@ export const CreateUserModal: React.FC<Props> = ({ isOpen, onClose }) => {
         role: rol,
         scopeLevel,
         scopeId,
-        candidatoId,
+        candidatoId: finalCandidatoId,
+        supervisorId: finalSupervisorId,
+        leaderId: rol === 'witness' || rol === 'voter' ? leaderId : undefined,
       });
 
       setStatusMsg({
         type: 'success',
-        text: `Usuario ${nombre} creado y guardado en la tabla 'actors' con id de auth sincronizado.`,
+        text: `Usuario ${nombre} creado con rol ${rol} y vinculado correctamente.`,
       });
 
       setTimeout(() => {
         setNombre('');
         setEmail('');
         setPassword('');
+        setRol(allowedRoles[0]?.value || 'leader');
+        setPartidoId('');
+        setCandidatoId('');
+        setDepartamentoId('');
+        setMunicipioId('');
+        setSupervisorId('');
+        setLeaderId('');
         setStatusMsg(null);
         onClose();
       }, 1600);
@@ -199,7 +269,7 @@ export const CreateUserModal: React.FC<Props> = ({ isOpen, onClose }) => {
             </div>
           </div>
 
-          {/* Rol a asignar (filtrado por jerarquía) */}
+          {/* Rol a asignar */}
           <div>
             <label className="block text-xs font-semibold text-slate-300 mb-1 flex items-center justify-between">
               <span>Rol a Asignar *</span>
@@ -220,56 +290,162 @@ export const CreateUserModal: React.FC<Props> = ({ isOpen, onClose }) => {
             </select>
           </div>
 
-          {/* Amarre Territorial Obligatorio */}
-          <div className="p-3.5 bg-slate-950/70 border border-slate-800 rounded-xl space-y-3">
-            <div className="flex items-center gap-2 text-xs font-bold text-emerald-400">
-              <MapPin className="w-4 h-4" />
-              <span>Amarre Territorial (Departamento / Municipio)</span>
+          {/* Partido (candidateSupervisor y leader) */}
+          {mostrarPartido && (
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1">
+                Partido Político *
+              </label>
+              <select
+                value={partidoId}
+                onChange={(e) => {
+                  setPartidoId(e.target.value);
+                  if (!e.target.value) {
+                    setCandidatoId('');
+                    setDepartamentoId('');
+                    setMunicipioId('');
+                  }
+                }}
+                className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500"
+              >
+                <option value="">Seleccionar partido</option>
+                {partidos.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.nombre} ({p.siglas})
+                  </option>
+                ))}
+              </select>
             </div>
+          )}
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-300 mb-1">
-                  Departamento Asignado *
-                </label>
-                <select
-                  value={departamentoId}
-                  onChange={(e) => {
-                    setDepartamentoId(e.target.value);
-                    const firstMun = MUNICIPIOS.find(m => m.departamentoId === e.target.value);
-                    if (firstMun) setMunicipioId(firstMun.id);
-                  }}
-                  className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
-                >
-                  {DEPARTAMENTOS.map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {d.nombre} (Cód. {d.codigo})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-300 mb-1">
-                  Municipio Asignado *
-                </label>
-                <select
-                  value={municipioId}
-                  onChange={(e) => setMunicipioId(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
-                >
-                  {municipiosFiltrados.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.nombre}
-                    </option>
-                  ))}
-                </select>
-              </div>
+          {/* Candidato (candidateSupervisor y leader) */}
+          {mostrarCandidato && (
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1">
+                Candidato *
+              </label>
+              <select
+                value={candidatoId}
+                onChange={(e) => {
+                  setCandidatoId(e.target.value);
+                  const cand = candidatos.find(c => c.id === e.target.value);
+                  if (cand) {
+                    // Auto-completar departamento y municipio según el cargo del candidato
+                    if (cand.cargo === 'presidente') {
+                      setDepartamentoId('');
+                      setMunicipioId('');
+                    } else if (cand.cargo === 'gobernacion' || cand.cargo === 'asamblea_departamental') {
+                      setDepartamentoId('');
+                      setMunicipioId('');
+                    } else {
+                      setDepartamentoId(cand.departamentoId || '');
+                      setMunicipioId(cand.municipioId || '');
+                    }
+                  }
+                }}
+                className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500"
+              >
+                <option value="">Seleccionar candidato</option>
+                {candidatosDisponibles.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.nombre} ({c.cargo})
+                  </option>
+                ))}
+              </select>
             </div>
-            <p className="text-[10px] text-slate-400">
-              Este usuario solo podrá ver métricas, puestos, testigos y votantes pertenecientes a esta jurisdicción territorial.
-            </p>
-          </div>
+          )}
+
+          {/* Departamento (líder, o candidato no-presidencial) */}
+          {mostrarDepartamento && (
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1">
+                Departamento *
+              </label>
+              <select
+                value={departamentoId}
+                onChange={(e) => {
+                  setDepartamentoId(e.target.value);
+                  const firstMun = MUNICIPIOS.find(m => m.departamentoId === e.target.value);
+                  if (firstMun) setMunicipioId(firstMun.id);
+                  else setMunicipioId('');
+                }}
+                className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
+              >
+                <option value="">Seleccionar departamento</option>
+                {DEPARTAMENTOS.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.nombre} (Cód. {d.codigo})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Municipio (líder, testigo, votante, o candidato no-gobernación/asamblea) */}
+          {mostrarMunicipio && (
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1">
+                Municipio *
+              </label>
+              <select
+                value={municipioId}
+                onChange={(e) => setMunicipioId(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
+              >
+                <option value="">Seleccionar municipio</option>
+                {municipiosFiltrados.map((m) => (
+                  <option key={m.id} value={m.id}>{m.nombre}</option>
+                ))}
+                {municipiosFiltrados.length === 0 && (
+                  <option value="" disabled>No hay municipios para este departamento</option>
+                )}
+              </select>
+            </div>
+          )}
+
+          {/* Supervisor (solo leader) */}
+          {mostrarSupervisor && (
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1">
+                Supervisor (candidateSupervisor) *
+              </label>
+              <select
+                value={supervisorId}
+                onChange={(e) => setSupervisorId(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500"
+              >
+                <option value="">Seleccionar supervisor</option>
+                {supervisoresDisponibles.map((s) => (
+                  <option key={s.id} value={s.id}>{s.nombre}</option>
+                ))}
+                {supervisoresDisponibles.length === 0 && (
+                  <option value="" disabled>No hay supervisores disponibles</option>
+                )}
+              </select>
+            </div>
+          )}
+
+          {/* Líder (solo witness y voter) */}
+          {mostrarLider && (
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1">
+                Líder Responsable *
+              </label>
+              <select
+                value={leaderId}
+                onChange={(e) => setLeaderId(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500"
+              >
+                <option value="">Seleccionar líder</option>
+                {lideresDisponibles.map((l) => (
+                  <option key={l.id} value={l.id}>{l.nombre}</option>
+                ))}
+                {lideresDisponibles.length === 0 && (
+                  <option value="" disabled>No hay líderes disponibles</option>
+                )}
+              </select>
+            </div>
+          )}
 
           <div className="pt-2 flex justify-end gap-3">
             <button
@@ -282,7 +458,7 @@ export const CreateUserModal: React.FC<Props> = ({ isOpen, onClose }) => {
             </button>
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !!camposFaltantes()}
               className="px-5 py-2 text-sm font-semibold text-slate-950 bg-emerald-400 hover:bg-emerald-300 disabled:opacity-50 rounded-xl transition-all shadow-lg shadow-emerald-950/50 flex items-center gap-2"
             >
               {loading ? 'Guardando en BD…' : 'Crear y Vincular Usuario'}

@@ -12,7 +12,7 @@ interface ImportResult {
   errores: string[];
 }
 
-type HojaTipo = 'departamentos' | 'municipios' | 'puestos_votacion';
+type HojaTipo = 'departamentos' | 'municipios' | 'puestos_votacion' | 'partidos' | 'candidatos';
 
 const COLUMNAS_REQUERIDAS: Record<HojaTipo, string[]> = {
   departamentos: ['id', 'nombre', 'codigo', 'censo', 'curules', 'lat', 'lng'],
@@ -21,6 +21,11 @@ const COLUMNAS_REQUERIDAS: Record<HojaTipo, string[]> = {
     'id', 'nombre', 'municipio_id', 'departamento_id', 'zona', 'comuna_barrio',
     'direccion', 'lat', 'lng', 'censo_electoral', 'mesas_habilitadas',
     'meta_votos_campana', 'votos_proyectados',
+  ],
+  partidos: ['id', 'nombre', 'siglas', 'color', 'logo_url'],
+  candidatos: [
+    'id', 'partido_id', 'nombre', 'apellido', 'cedula', 'cargo',
+    'numero_tarjeton', 'numero_lista', 'departamento_id', 'municipio_id', 'foto_url',
   ],
 };
 
@@ -59,6 +64,26 @@ const COLUMNAS_EJEMPLO: Record<HojaTipo, Record<string, string | number>> = {
     meta_votos_campana: 800,
     votos_proyectados: 700,
   },
+  partidos: {
+    id: 'partido-001',
+    nombre: 'Coalición Por el Cambio',
+    siglas: 'CPC',
+    color: '#10b981',
+    logo_url: 'https://ejemplo.com/logo.png',
+  },
+  candidatos: {
+    id: 'candidato-001',
+    partido_id: 'partido-001',
+    nombre: 'Juan Carlos',
+    apellido: 'Pérez Gómez',
+    cedula: '12345678',
+    cargo: 'concejal',
+    numero_tarjeton: '045',
+    numero_lista: '1',
+    departamento_id: 'valle',
+    municipio_id: 'tulua',
+    foto_url: 'https://ejemplo.com/foto.jpg',
+  },
 };
 
 export const ImportarMasivoExcel: React.FC = () => {
@@ -94,7 +119,7 @@ export const ImportarMasivoExcel: React.FC = () => {
       XLSX.utils.book_append_sheet(wb, ws, hoja);
     });
 
-    XLSX.writeFile(wb, 'plantilla_electoapp_departamentos_municipios_puestos.xlsx');
+    XLSX.writeFile(wb, 'plantilla_electoapp_partidos_candidatos_departamentos_municipios_puestos.xlsx');
     addToast({
       type: 'info',
       title: 'Plantilla descargada',
@@ -346,6 +371,8 @@ export const ImportarMasivoExcel: React.FC = () => {
               <option value="departamentos">Departamentos</option>
               <option value="municipios">Municipios</option>
               <option value="puestos_votacion">Puestos de Votación</option>
+              <option value="partidos">Partidos Políticos</option>
+              <option value="candidatos">Candidatos</option>
             </select>
           </div>
           <div className="flex-1">

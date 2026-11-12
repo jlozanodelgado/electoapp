@@ -15,6 +15,7 @@ import {
   Trash2,
   Search,
   UserPlus,
+  Pencil,
 } from 'lucide-react';
 
 type AdminTab = 'partidos' | 'candidatos' | 'actores' | 'usuarios';
@@ -56,6 +57,8 @@ export const AdminPanelModule: React.FC = () => {
   const setIsNewCandidatoOpen = useElectoralStore(s => s.setIsNewCandidatoOpen);
   const setIsNewWitnessOpen = useElectoralStore(s => s.setIsNewWitnessOpen);
   const setIsNewVoterOpen = useElectoralStore(s => s.setIsNewVoterOpen);
+  const openEditPartido = useElectoralStore(s => s.openEditPartido);
+  const openEditCandidato = useElectoralStore(s => s.openEditCandidato);
   const deleteActor = useSecurityStore(s => s.deleteActor);
 
   const [tab, setTab] = useState<AdminTab>('partidos');
@@ -186,9 +189,18 @@ export const AdminPanelModule: React.FC = () => {
                       <p className="text-[11px] text-slate-500">Siglas: {p.siglas}</p>
                     </div>
                   </div>
-                  <Badge variant="blue" size="sm">
-                    {candidatos.filter(c => c.partidoId === p.id).length} candidatos
-                  </Badge>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Badge variant="blue" size="sm">
+                      {candidatos.filter(c => c.partidoId === p.id).length} candidatos
+                    </Badge>
+                    <button
+                      onClick={() => openEditPartido(p)}
+                      className="p-1.5 rounded-lg text-slate-500 hover:text-emerald-400 hover:bg-emerald-500/10 border border-transparent hover:border-emerald-500/30 transition-colors"
+                      title="Editar partido"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -236,6 +248,13 @@ export const AdminPanelModule: React.FC = () => {
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       {c.numeroTarjeton && <Badge variant="slate" size="sm">Tarjetón {c.numeroTarjeton}</Badge>}
+                      <button
+                        onClick={() => openEditCandidato(c)}
+                        className="p-1.5 rounded-lg text-slate-500 hover:text-blue-400 hover:bg-blue-500/10 border border-transparent hover:border-blue-500/30 transition-colors"
+                        title="Editar candidato"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
                     </div>
                   </div>
                 );

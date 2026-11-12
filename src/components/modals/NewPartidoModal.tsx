@@ -1,16 +1,23 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useElectoralStore } from '../../store/electoralStore';
 import { Button } from '../ui/Button';
 import { X, Flag } from 'lucide-react';
 
 export const NewPartidoModal: React.FC = () => {
-  const { isNewPartidoOpen, setIsNewPartidoOpen, addPartido } = useElectoralStore();
+  const {
+    isNewPartidoOpen,
+    setIsNewPartidoOpen,
+    addPartido,
+    editingPartido,
+    updatePartido,
+  } = useElectoralStore();
   const [nombre, setNombre] = useState('');
   const [siglas, setSiglas] = useState('');
   const [color, setColor] = useState('#10b981');
   const [logoUrl, setLogoUrl] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const isEditing = Boolean(editingPartido);
 
   const colores = [
     { value: '#10b981', label: 'Esmeralda' },
@@ -23,6 +30,23 @@ export const NewPartidoModal: React.FC = () => {
     { value: '#84cc16', label: 'Lima' },
   ];
 
+  useEffect(() => {
+    if (!isNewPartidoOpen) return;
+
+    if (editingPartido) {
+      setNombre(editingPartido.nombre);
+      setSiglas(editingPartido.siglas);
+      setColor(editingPartido.color || '#10b981');
+      setLogoUrl(editingPartido.logoUrl || '');
+    } else {
+      setNombre('');
+      setSiglas('');
+      setColor('#10b981');
+      setLogoUrl('');
+    }
+    setError(null);
+  }, [isNewPartidoOpen, editingPartido]);
+
   if (!isNewPartidoOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -32,15 +56,22 @@ export const NewPartidoModal: React.FC = () => {
     setSaving(true);
     setError(null);
 
+    const datos = {
+      nombre: nombre.trim(),
+      siglas: siglas.trim().toUpperCase(),
+      color,
+      logoUrl: logoUrl.trim() || undefined,
+    };
+
     try {
-      await addPartido({ nombre, siglas, color, logoUrl: logoUrl || undefined });
+      if (editingPartido) {
+        await updatePartido(editingPartido.id, datos);
+      } else {
+        await addPartido(datos);
+      }
       setIsNewPartidoOpen(false);
-      setNombre('');
-      setSiglas('');
-      setColor('#10b981');
-      setLogoUrl('');
     } catch (err) {
-      console.error('Error creando partido:', err);
+      console.error('Error guardando partido:', err);
       setError(err instanceof Error ? err.message : 'No se pudo guardar el partido.');
     } finally {
       setSaving(false);
@@ -53,7 +84,9 @@ export const NewPartidoModal: React.FC = () => {
         <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/60">
           <div className="flex items-center gap-2">
             <Flag className="w-5 h-5 text-emerald-400" />
-            <h3 className="font-bold text-white text-sm">Crear Partido Político</h3>
+            <h3 className="font-bold text-white text-sm">
+              {isEditing ? 'Editar Partido Político' : 'Crear Partido Político'}
+            </h3>
           </div>
           <button
             onClick={() => setIsNewPartidoOpen(false)}
@@ -142,7 +175,7 @@ export const NewPartidoModal: React.FC = () => {
               icon={<Flag className="w-4 h-4" />}
               disabled={!nombre || !siglas || saving}
             >
-              {saving ? 'Guardando…' : 'Crear Partido'}
+              {saving ? 'Guardando…' : isEditing ? 'Guardar Cambios' : 'Crear Partido'}
             </Button>
           </div>
         </form>

@@ -271,6 +271,15 @@ class SupabasePostGISMockService {
     return nuevo;
   }
 
+  updatePartido(id: string, updates: Partial<Partido>): Partido | null {
+    const list = this.getPartidos();
+    const actual = list.find(p => p.id === id);
+    if (!actual) return null;
+    const actualizado = { ...actual, ...updates, id };
+    this.setStorage(STORAGE_KEYS.PARTIDOS, list.map(p => (p.id === id ? actualizado : p)));
+    return actualizado;
+  }
+
   // Candidatos
   getCandidatos(): Candidato[] {
     return this.getStorage<Candidato[]>(STORAGE_KEYS.CANDIDATOS, []).filter(c => this.isUuid(c.id));
@@ -282,6 +291,15 @@ class SupabasePostGISMockService {
     list.unshift(nuevo);
     this.setStorage(STORAGE_KEYS.CANDIDATOS, list);
     return nuevo;
+  }
+
+  updateCandidato(id: string, updates: Partial<Candidato>): Candidato | null {
+    const list = this.getCandidatos();
+    const actual = list.find(c => c.id === id);
+    if (!actual) return null;
+    const actualizado = { ...actual, ...updates, id };
+    this.setStorage(STORAGE_KEYS.CANDIDATOS, list.map(c => (c.id === id ? actualizado : c)));
+    return actualizado;
   }
 
   // ---------------------------------------------------------------------

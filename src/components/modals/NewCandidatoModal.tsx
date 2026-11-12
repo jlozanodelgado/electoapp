@@ -11,6 +11,8 @@ export const NewCandidatoModal: React.FC = () => {
     addCandidato,
     setIsNewCandidatoOpen,
     setIsNewPartidoOpen,
+    editingCandidato,
+    updateCandidato,
   } = useElectoralStore();
   const [partidoId, setPartidoId] = useState('');
   const [nombre, setNombre] = useState('');
@@ -63,15 +65,49 @@ export const NewCandidatoModal: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const municipiosDisponibles = municipiosPorDepartamento[departamentoId] || [];
+  const isEditing = Boolean(editingCandidato);
 
   const cargoRequiereMunicipio = cargo === 'concejal' || cargo === 'asamblea_departamental';
   const cargoRequiereLista = cargo === 'concejal' || cargo === 'asamblea_departamental';
 
+  // Prellenar el formulario al abrir: datos del candidato si se edita, o limpio si es nuevo.
   useEffect(() => {
-    if (partidos.length > 0 && !partidoId) {
+    if (!isNewCandidatoOpen) return;
+
+    if (editingCandidato) {
+      setPartidoId(editingCandidato.partidoId || partidos[0]?.id || '');
+      setNombre(editingCandidato.nombre || '');
+      setApellido(editingCandidato.apellido || '');
+      setCedula(editingCandidato.cedula || '');
+      setNumeroTarjeton(editingCandidato.numeroTarjeton || '');
+      setNumeroLista(editingCandidato.numeroLista || '');
+      setCargo(editingCandidato.cargo || 'concejal');
+      setDepartamentoId(editingCandidato.departamentoId || '');
+      setMunicipioId(editingCandidato.municipioId || '');
+      setFotoUrl(editingCandidato.fotoUrl || '');
+      setKeepOpen(false);
+    } else {
+      setPartidoId('');
+      setNombre('');
+      setApellido('');
+      setCedula('');
+      setNumeroTarjeton('');
+      setNumeroLista('');
+      setCargo('concejal');
+      setDepartamentoId('');
+      setMunicipioId('');
+      setFotoUrl('');
+      setKeepOpen(false);
+    }
+    setError(null);
+  }, [isNewCandidatoOpen, editingCandidato]);
+
+  // Seleccionar automáticamente el primer partido al crear un candidato nuevo.
+  useEffect(() => {
+    if (isNewCandidatoOpen && !editingCandidato && partidos.length > 0 && !partidoId) {
       setPartidoId(partidos[0].id);
     }
-  }, [partidos, partidoId]);
+  }, [isNewCandidatoOpen, editingCandidato, partidos, partidoId]);
 
   // Todos los hooks deben ejecutarse antes de cualquier retorno condicional.
   if (!isNewCandidatoOpen) return null;
@@ -87,42 +123,41 @@ export const NewCandidatoModal: React.FC = () => {
     setError(null);
 
     try {
-      await addCandidato({
+      const datos = {
         partidoId,
-        nombre,
-        apellido: apellido || undefined,
+        nombre: nombre.trim(),
+        apellido: apellido.trim() || undefined,
         cedula,
-        numeroTarjeton: numeroTarjeton || undefined,
-        numeroLista: cargoRequiereLista ? (numeroLista || undefined) : undefined,
+        numeroTarjeton: numeroTarjeton.trim() || undefined,
+        numeroLista: cargoRequiereLista ? (numeroLista.trim() || undefined) : undefined,
         cargo,
         departamentoId: departamentoId || undefined,
         municipioId: cargoRequiereMunicipio ? municipioId : undefined,
-        fotoUrl: fotoUrl || undefined,
-      });
+        fotoUrl: fotoUrl.trim() || undefined,
+      };
 
-      if (keepOpen) {
-        // Limpiar formulario pero mantener modal abierto para crear otro
-        setNombre('');
-        setApellido('');
-        setCedula('');
-        setNumeroTarjeton('');
-        setNumeroLista('');
-        setPartidoId(partidos[0].id);
-        setMunicipioId('');
-        setFotoUrl('');
-      } else {
+      if (editingCandidato) {
+        await updateCandidato(editingCandidato.id, datos);
         setIsNewCandidatoOpen(false);
-        setNombre('');
-        setApellido('');
-        setCedula('');
-        setNumeroTarjeton('');
-        setNumeroLista('');
-        setPartidoId(partidos[0].id);
-        setMunicipioId('');
-        setFotoUrl('');
+      } else {
+        await addCandidato(datos);
+
+        if (keepOpen) {
+          // Limpiar formulario pero mantener modal abierto para crear otro
+          setNombre('');
+          setApellido('');
+          setCedula('');
+          setNumeroTarjeton('');
+          setNumeroLista('');
+          setPartidoId(partidos[0]?.id || '');
+          setMunicipioId('');
+          setFotoUrl('');
+        } else {
+          setIsNewCandidatoOpen(false);
+        }
       }
     } catch (err) {
-      console.error('Error creando candidato:', err);
+      console.error('Error guardando candidato:', err);
       setError(err instanceof Error ? err.message : 'No se pudo guardar el candidato.');
     } finally {
       setSaving(false);
@@ -135,7 +170,9 @@ export const NewCandidatoModal: React.FC = () => {
         <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/60">
           <div className="flex items-center gap-2">
             <User className="w-5 h-5 text-blue-400" />
-            <h3 className="font-bold text-white text-sm">Registrar Candidato</h3>
+            <h3 className="font-bold text-white text-sm">
+              {isEditing ? 'Editar Candidato' : 'Registrar Candidato'}
+            </h3>
           </div>
           <button
             onClick={() => setIsNewCandidatoOpen(false)}
@@ -189,6 +226,7 @@ export const NewCandidatoModal: React.FC = () => {
               className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:outline-none focus:border-emerald-500"
               required
             >
+              <option value="" disabled>Seleccionar partido</option>
               {partidos.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.nombre} ({p.siglas})
@@ -344,17 +382,19 @@ export const NewCandidatoModal: React.FC = () => {
           )}
 
           <div className="pt-3 border-t border-slate-800 flex flex-col sm:flex-row gap-2">
-            <div className="flex-1">
-              <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-400">
-                <input
-                  type="checkbox"
-                  checked={keepOpen}
-                  onChange={(e) => setKeepOpen(e.target.checked)}
-                  className="w-4 h-4 rounded bg-slate-950 border-slate-700 text-emerald-500 focus:ring-emerald-500"
-                />
-                <span>Crear otro candidato después</span>
-              </label>
-            </div>
+            {!isEditing && (
+              <div className="flex-1">
+                <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-400">
+                  <input
+                    type="checkbox"
+                    checked={keepOpen}
+                    onChange={(e) => setKeepOpen(e.target.checked)}
+                    className="w-4 h-4 rounded bg-slate-950 border-slate-700 text-emerald-500 focus:ring-emerald-500"
+                  />
+                  <span>Crear otro candidato después</span>
+                </label>
+              </div>
+            )}
             <Button
               type="button"
               variant="outline"
@@ -371,7 +411,13 @@ export const NewCandidatoModal: React.FC = () => {
               icon={<Building className="w-4 h-4" />}
               disabled={!nombre || !cedula || !partidoId || saving}
             >
-              {saving ? 'Guardando…' : keepOpen ? 'Crear Otro' : 'Crear y Salir'}
+              {saving
+                ? 'Guardando…'
+                : isEditing
+                  ? 'Guardar Cambios'
+                  : keepOpen
+                    ? 'Crear Otro'
+                    : 'Crear y Salir'}
             </Button>
           </div>
         </form>

@@ -117,9 +117,8 @@ BEGIN
           LIMIT 1;
         END IF;
 
-        -- Si llega la relación, mantener lleno el texto viejo.
-        IF NEW.partido_id IS NOT NULL
-           AND (NEW.partido IS NULL OR btrim(NEW.partido) = '') THEN
+        -- Si llega la relación, reflejarla en el texto viejo (también al cambiar de partido).
+        IF NEW.partido_id IS NOT NULL THEN
           SELECT p.nombre INTO NEW.partido
           FROM public.partidos p
           WHERE p.id = NEW.partido_id;

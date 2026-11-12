@@ -668,6 +668,57 @@ export class SupabaseService {
     return nuevo;
   }
 
+  static async updatePartido(
+    id: string,
+    partido: Omit<Partido, 'id' | 'creadoEn'>,
+  ): Promise<Partido> {
+    if (!isUuid(id)) {
+      throw new Error('El partido no tiene un identificador válido. Recarga la página e inténtalo de nuevo.');
+    }
+
+    if (isSupabaseConfigured() && supabase) {
+      try {
+        const { data, error } = await supabase
+          .from('partidos')
+          .update({
+            nombre: partido.nombre,
+            siglas: partido.siglas.toUpperCase(),
+            color: partido.color || null,
+            logo_url: partido.logoUrl || null,
+          })
+          .eq('id', id)
+          .select('*')
+          .single();
+
+        if (error) {
+          console.error('[Supabase] Error actualizando partido:', error.message);
+          throw new Error(describeSupabaseError(error, 'partidos'));
+        }
+
+        const actualizado: Partido = {
+          id: data.id,
+          nombre: data.nombre,
+          siglas: data.siglas,
+          color: data.color ?? undefined,
+          logoUrl: data.logo_url ?? undefined,
+          creadoEn: data.creado_en,
+        };
+
+        supabaseMock.updatePartido(id, actualizado);
+        return actualizado;
+      } catch (e) {
+        console.error('[Supabase] Error actualizando partido:', e);
+        throw e;
+      }
+    }
+
+    const actualizado = supabaseMock.updatePartido(id, partido);
+    if (!actualizado) {
+      throw new Error('No se encontró el partido que intentas editar.');
+    }
+    return actualizado;
+  }
+
   // ---------------------------------------------------------------------
   // Candidatos
   // ---------------------------------------------------------------------
@@ -749,6 +800,74 @@ export class SupabaseService {
 
     supabaseMock.addCandidato(nuevo);
     return nuevo;
+  }
+
+  static async updateCandidato(
+    id: string,
+    candidato: Omit<Candidato, 'id' | 'creadoEn'>,
+  ): Promise<Candidato> {
+    if (!isUuid(id)) {
+      throw new Error('El candidato no tiene un identificador válido. Recarga la página e inténtalo de nuevo.');
+    }
+    if (!isUuid(candidato.partidoId)) {
+      throw new Error('Selecciona un partido válido antes de guardar el candidato.');
+    }
+
+    const cedula = String(candidato.cedula ?? '').replace(/\D/g, '') || String(candidato.cedula ?? '');
+
+    if (isSupabaseConfigured() && supabase) {
+      try {
+        const { data, error } = await supabase
+          .from('candidatos')
+          .update({
+            partido_id: candidato.partidoId,
+            nombre: candidato.nombre,
+            apellido: candidato.apellido ?? null,
+            cedula,
+            cargo: candidato.cargo,
+            numero_tarjeton: candidato.numeroTarjeton ?? null,
+            numero_lista: candidato.numeroLista ?? null,
+            departamento_id: candidato.departamentoId ?? null,
+            municipio_id: candidato.municipioId ?? null,
+            foto_url: candidato.fotoUrl ?? null,
+          })
+          .eq('id', id)
+          .select('*')
+          .single();
+
+        if (error) {
+          console.error('[Supabase] Error actualizando candidato:', error.message);
+          throw new Error(describeSupabaseError(error, 'candidatos'));
+        }
+
+        const actualizado: Candidato = {
+          id: data.id,
+          partidoId: data.partido_id,
+          nombre: data.nombre,
+          apellido: data.apellido ?? undefined,
+          cedula: data.cedula,
+          cargo: data.cargo,
+          numeroTarjeton: data.numero_tarjeton ?? undefined,
+          numeroLista: data.numero_lista ?? undefined,
+          departamentoId: data.departamento_id ?? undefined,
+          municipioId: data.municipio_id ?? undefined,
+          fotoUrl: data.foto_url ?? undefined,
+          creadoEn: data.creado_en,
+        };
+
+        supabaseMock.updateCandidato(id, actualizado);
+        return actualizado;
+      } catch (e) {
+        console.error('[Supabase] Error actualizando candidato:', e);
+        throw e;
+      }
+    }
+
+    const actualizado = supabaseMock.updateCandidato(id, { ...candidato, cedula });
+    if (!actualizado) {
+      throw new Error('No se encontró el candidato que intentas editar.');
+    }
+    return actualizado;
   }
 
   // ---------------------------------------------------------------------

@@ -79,6 +79,10 @@ interface ElectoralState {
   isFraudModalOpen: boolean;
   alertaSeleccionada: AlertaFraude | null;
 
+  // Edición de partidos y candidatos
+  editingPartido: Partido | null;
+  editingCandidato: Candidato | null;
+
   // Simulación en vivo Día D
   isSimulandoDiaD: boolean;
   diaDProgresoPct: number;
@@ -114,6 +118,10 @@ interface ElectoralState {
   // Partidos y Candidatos
   addPartido: (partido: Omit<Partido, 'id' | 'creadoEn'>) => void;
   addCandidato: (candidato: Omit<Candidato, 'id' | 'creadoEn'>) => void;
+  openEditPartido: (partido: Partido) => void;
+  openEditCandidato: (candidato: Candidato) => void;
+  updatePartido: (id: string, partido: Omit<Partido, 'id' | 'creadoEn'>) => Promise<Partido>;
+  updateCandidato: (id: string, candidato: Omit<Candidato, 'id' | 'creadoEn'>) => Promise<Candidato>;
 
   // Actores jerárquicos
   addActor: (actor: Omit<Actor, 'id' | 'creadoEn'>) => void;
@@ -175,6 +183,8 @@ export const useElectoralStore = create<ElectoralState>((set, get) => ({
   isDigitalizeE14Open: false,
   isFraudModalOpen: false,
   alertaSeleccionada: null,
+  editingPartido: null,
+  editingCandidato: null,
 
   isSimulandoDiaD: false,
   diaDProgresoPct: 42,
@@ -286,6 +296,40 @@ export const useElectoralStore = create<ElectoralState>((set, get) => ({
     return nuevo;
   },
 
+  openEditPartido: (partido) =>
+    set({ editingPartido: partido, isNewPartidoOpen: true }),
+
+  openEditCandidato: (candidato) =>
+    set({ editingCandidato: candidato, isNewCandidatoOpen: true }),
+
+  updatePartido: async (id, partidoData) => {
+    const actualizado = await SupabaseService.updatePartido(id, partidoData);
+    set(state => ({
+      partidos: state.partidos.map(p => (p.id === id ? actualizado : p)),
+      editingPartido: null,
+    }));
+    get().addToast({
+      type: 'success',
+      title: 'Partido actualizado',
+      message: `${actualizado.nombre} (${actualizado.siglas}) fue actualizado exitosamente`,
+    });
+    return actualizado;
+  },
+
+  updateCandidato: async (id, candidatoData) => {
+    const actualizado = await SupabaseService.updateCandidato(id, candidatoData);
+    set(state => ({
+      candidatos: state.candidatos.map(c => (c.id === id ? actualizado : c)),
+      editingCandidato: null,
+    }));
+    get().addToast({
+      type: 'success',
+      title: 'Candidato actualizado',
+      message: `${actualizado.nombre} ${actualizado.apellido ?? ''} fue actualizado exitosamente`,
+    });
+    return actualizado;
+  },
+
   // Actores jerárquicos
   addActor: async (actorData) => {
     const { actorRole: creadorRole, actorId: creadorId } = get();
@@ -351,8 +395,8 @@ export const useElectoralStore = create<ElectoralState>((set, get) => ({
 
   setIsNewWitnessOpen: (open) => set({ isNewWitnessOpen: open }),
   setIsNewVoterOpen: (open) => set({ isNewVoterOpen: open }),
-  setIsNewPartidoOpen: (open: boolean) => set({ isNewPartidoOpen: open }),
-  setIsNewCandidatoOpen: (open: boolean) => set({ isNewCandidatoOpen: open }),
+  setIsNewPartidoOpen: (open: boolean) => set({ isNewPartidoOpen: open, editingPartido: null }),
+  setIsNewCandidatoOpen: (open: boolean) => set({ isNewCandidatoOpen: open, editingCandidato: null }),
   setIsDigitalizeE14Open: (open) => set({ isDigitalizeE14Open: open }),
   setIsFraudModalOpen: (open, alerta = null) => set({ isFraudModalOpen: open, alertaSeleccionada: alerta }),
 

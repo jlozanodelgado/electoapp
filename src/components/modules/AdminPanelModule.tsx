@@ -5,8 +5,6 @@ import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
 import { CreateUserModal } from '../modals/CreateUserModal';
-import { NewPartidoModal } from '../modals/NewPartidoModal';
-import { NewCandidatoModal } from '../modals/NewCandidatoModal';
 import {
   Shield,
   Flag,
@@ -381,8 +379,6 @@ export const AdminPanelModule: React.FC = () => {
 
       {/* Modales globales del panel */}
       <CreateUserModal isOpen={isCreateUserOpen} onClose={() => setIsCreateUserOpen(false)} />
-      <NewPartidoModal />
-      <NewCandidatoModal />
     </div>
   );
 };

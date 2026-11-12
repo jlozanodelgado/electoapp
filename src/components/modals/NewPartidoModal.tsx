@@ -9,6 +9,8 @@ export const NewPartidoModal: React.FC = () => {
   const [siglas, setSiglas] = useState('');
   const [color, setColor] = useState('#10b981');
   const [logoUrl, setLogoUrl] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const colores = [
     { value: '#10b981', label: 'Esmeralda' },
@@ -23,16 +25,26 @@ export const NewPartidoModal: React.FC = () => {
 
   if (!isNewPartidoOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!nombre || !siglas) return;
+    if (!nombre || !siglas || saving) return;
 
-    addPartido({ nombre, siglas, color, logoUrl: logoUrl || undefined });
-    setIsNewPartidoOpen(false);
-    setNombre('');
-    setSiglas('');
-    setColor('#10b981');
-    setLogoUrl('');
+    setSaving(true);
+    setError(null);
+
+    try {
+      await addPartido({ nombre, siglas, color, logoUrl: logoUrl || undefined });
+      setIsNewPartidoOpen(false);
+      setNombre('');
+      setSiglas('');
+      setColor('#10b981');
+      setLogoUrl('');
+    } catch (err) {
+      console.error('Error creando partido:', err);
+      setError(err instanceof Error ? err.message : 'No se pudo guardar el partido.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -108,6 +120,12 @@ export const NewPartidoModal: React.FC = () => {
             />
           </div>
 
+          {error && (
+            <div className="p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-300 text-[11px] leading-relaxed">
+              {error}
+            </div>
+          )}
+
           <div className="pt-3 border-t border-slate-800 flex justify-end gap-2">
             <Button
               type="button"
@@ -122,9 +140,9 @@ export const NewPartidoModal: React.FC = () => {
               variant="primary"
               size="sm"
               icon={<Flag className="w-4 h-4" />}
-              disabled={!nombre || !siglas}
+              disabled={!nombre || !siglas || saving}
             >
-              Crear Partido
+              {saving ? 'Guardando…' : 'Crear Partido'}
             </Button>
           </div>
         </form>

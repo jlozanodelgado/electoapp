@@ -15,6 +15,7 @@ import {
   ACTAS_E14_INICIALES,
   ALERTAS_FRAUDE_INICIALES,
 } from '../data/mockElectoralData';
+import { generateUuid } from '../utils/uuid';
 
 const STORAGE_KEYS = {
   PUESTOS: 'electoapp_tulua_puestos_v1',
@@ -211,7 +212,7 @@ class SupabasePostGISMockService {
 
   createActor(actor: any): any[] {
     const list = this.getActors();
-    const nuevo = { ...actor, id: actor.id ?? `actor-${Date.now()}` };
+    const nuevo = { ...actor, id: actor.id ?? generateUuid() };
     list.unshift(nuevo);
     this.setStorage(ACTORS_KEY, list);
     return list;
@@ -231,7 +232,7 @@ class SupabasePostGISMockService {
 
   addActor(actor: Actor): Actor {
     const list = this.getActors();
-    const nuevo = { ...actor, id: actor.id ?? `actor-${Date.now()}` };
+    const nuevo = { ...actor, id: actor.id ?? generateUuid() };
     list.unshift(nuevo);
     this.setStorage(ACTORS_KEY, list);
     return nuevo;
@@ -250,7 +251,7 @@ class SupabasePostGISMockService {
 
   addPartido(partido: Partido): Partido {
     const list = this.getPartidos();
-    const nuevo = { ...partido, id: partido.id ?? `partido-${Date.now()}` };
+    const nuevo = { ...partido, id: partido.id ?? generateUuid() };
     list.unshift(nuevo);
     this.setStorage(STORAGE_KEYS.PARTIDOS, list);
     return nuevo;
@@ -263,7 +264,7 @@ class SupabasePostGISMockService {
 
   addCandidato(candidato: Candidato): Candidato {
     const list = this.getCandidatos();
-    const nuevo = { ...candidato, id: candidato.id ?? `candidato-${Date.now()}` };
+    const nuevo = { ...candidato, id: candidato.id ?? generateUuid() };
     list.unshift(nuevo);
     this.setStorage(STORAGE_KEYS.CANDIDATOS, list);
     return nuevo;

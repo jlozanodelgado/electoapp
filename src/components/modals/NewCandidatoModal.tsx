@@ -52,6 +52,9 @@ export const NewCandidatoModal: React.FC = () => {
   };
 
   const [municipioId, setMunicipioId] = useState('');
+  const [keepOpen, setKeepOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const municipiosDisponibles = municipiosPorDepartamento[departamentoId] || [];
 
   const cargoRequiereMunicipio = cargo === 'concejal' || cargo === 'asamblea_departamental';
@@ -63,48 +66,57 @@ export const NewCandidatoModal: React.FC = () => {
     }
   }, [partidos, partidoId]);
 
+  // Todos los hooks deben ejecutarse antes de cualquier retorno condicional.
   if (!partidos || partidos.length === 0) return null;
-
-  const [keepOpen, setKeepOpen] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!nombre || !cedula || !partidoId) return;
+    if (!nombre || !cedula || !partidoId || saving) return;
     if (cargoRequiereMunicipio && !municipioId) return;
 
-    await addCandidato({
-      partidoId,
-      nombre,
-      apellido: apellido || undefined,
-      cedula,
-      numeroTarjeton: numeroTarjeton || undefined,
-      numeroLista: cargoRequiereLista ? (numeroLista || undefined) : undefined,
-      cargo,
-      departamentoId: departamentoId || undefined,
-      municipioId: cargoRequiereMunicipio ? municipioId : undefined,
-      fotoUrl: fotoUrl || undefined,
-    });
+    setSaving(true);
+    setError(null);
 
-    if (keepOpen) {
-      // Limpiar formulario pero mantener modal abierto para crear otro
-      setNombre('');
-      setApellido('');
-      setCedula('');
-      setNumeroTarjeton('');
-      setNumeroLista('');
-      setPartidoId(partidos[0].id);
-      setMunicipioId('');
-      setFotoUrl('');
-    } else {
-      setIsNewCandidatoOpen(false);
-      setNombre('');
-      setApellido('');
-      setCedula('');
-      setNumeroTarjeton('');
-      setNumeroLista('');
-      setPartidoId(partidos[0].id);
-      setMunicipioId('');
-      setFotoUrl('');
+    try {
+      await addCandidato({
+        partidoId,
+        nombre,
+        apellido: apellido || undefined,
+        cedula,
+        numeroTarjeton: numeroTarjeton || undefined,
+        numeroLista: cargoRequiereLista ? (numeroLista || undefined) : undefined,
+        cargo,
+        departamentoId: departamentoId || undefined,
+        municipioId: cargoRequiereMunicipio ? municipioId : undefined,
+        fotoUrl: fotoUrl || undefined,
+      });
+
+      if (keepOpen) {
+        // Limpiar formulario pero mantener modal abierto para crear otro
+        setNombre('');
+        setApellido('');
+        setCedula('');
+        setNumeroTarjeton('');
+        setNumeroLista('');
+        setPartidoId(partidos[0].id);
+        setMunicipioId('');
+        setFotoUrl('');
+      } else {
+        setIsNewCandidatoOpen(false);
+        setNombre('');
+        setApellido('');
+        setCedula('');
+        setNumeroTarjeton('');
+        setNumeroLista('');
+        setPartidoId(partidos[0].id);
+        setMunicipioId('');
+        setFotoUrl('');
+      }
+    } catch (err) {
+      console.error('Error creando candidato:', err);
+      setError(err instanceof Error ? err.message : 'No se pudo guardar el candidato.');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -281,6 +293,12 @@ export const NewCandidatoModal: React.FC = () => {
             </p>
           </div>
 
+          {error && (
+            <div className="p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-300 text-[11px] leading-relaxed">
+              {error}
+            </div>
+          )}
+
           <div className="pt-3 border-t border-slate-800 flex flex-col sm:flex-row gap-2">
             <div className="flex-1">
               <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-400">
@@ -307,9 +325,9 @@ export const NewCandidatoModal: React.FC = () => {
               variant="primary"
               size="sm"
               icon={<Building className="w-4 h-4" />}
-              disabled={!nombre || !cedula || !partidoId}
+              disabled={!nombre || !cedula || !partidoId || saving}
             >
-              {keepOpen ? 'Crear Otro' : 'Crear y Salir'}
+              {saving ? 'Guardando…' : keepOpen ? 'Crear Otro' : 'Crear y Salir'}
             </Button>
           </div>
         </form>

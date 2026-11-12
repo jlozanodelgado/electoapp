@@ -1,5 +1,6 @@
 import { supabase, isSupabaseConfigured } from './supabaseClient';
 import { supabaseMock } from './supabaseMock';
+import { generateUuid } from '../utils/uuid';
 import { 
   PuestoVotacion, 
   TestigoElectoral, 
@@ -10,6 +11,28 @@ import {
   Candidato,
   Actor
 } from '../types/electoral';
+
+/**
+ * Convierte los valores del enum `actor_role` de PostgreSQL a los roles
+ * canónicos que usa la aplicación.
+ */
+function normalizeActorRole(rawRole: unknown, nivel?: number | null): Actor['role'] {
+  const value = String(rawRole ?? '').toLowerCase();
+
+  if (value.includes('supervisor_total') || value.includes('totalsupervisor') || nivel === 0) {
+    return 'totalSupervisor';
+  }
+  if (value.includes('supervisor_candidato') || value.includes('candidatesupervisor') || nivel === 1) {
+    return 'candidateSupervisor';
+  }
+  if (value.includes('lider') || value.includes('leader') || nivel === 2) {
+    return 'leader';
+  }
+  if (value.includes('testigo') || value.includes('witness') || nivel === 3) {
+    return 'witness';
+  }
+  return 'voter';
+}
 
 export class SupabaseService {
   // ---------------------------------------------------------------------
@@ -558,23 +581,31 @@ export class SupabaseService {
   }
 
   static async savePartido(partido: Omit<Partido, 'id' | 'creadoEn'>): Promise<Partido> {
-    const nuevoMock = supabaseMock.addPartido(partido as Partido);
+    const nuevo: Partido = {
+      ...partido,
+      id: generateUuid(),
+      creadoEn: new Date().toISOString(),
+    };
 
     if (isSupabaseConfigured() && supabase) {
       try {
-        await supabase.from('partidos').insert({
-          id: nuevoMock.id,
-          nombre: partido.nombre,
-          siglas: partido.siglas,
-          color: partido.color,
-          logo_url: partido.logoUrl,
+        const { error } = await supabase.from('partidos').insert({
+          id: nuevo.id,
+          nombre: nuevo.nombre,
+          siglas: nuevo.siglas,
+          color: nuevo.color,
+          logo_url: nuevo.logoUrl,
         });
+
+        if (error) throw new Error(error.message);
       } catch (e) {
-        console.warn('Error guardando partido en Supabase:', e);
+        console.error('[Supabase] Error guardando partido:', e);
+        throw e;
       }
     }
 
-    return nuevoMock;
+    supabaseMock.addPartido(nuevo);
+    return nuevo;
   }
 
   // ---------------------------------------------------------------------
@@ -615,29 +646,37 @@ export class SupabaseService {
   }
 
   static async saveCandidato(candidato: Omit<Candidato, 'id' | 'creadoEn'>): Promise<Candidato> {
-    const nuevoMock = supabaseMock.addCandidato(candidato as Candidato);
+    const nuevo: Candidato = {
+      ...candidato,
+      id: generateUuid(),
+      creadoEn: new Date().toISOString(),
+    };
 
     if (isSupabaseConfigured() && supabase) {
       try {
-        await supabase.from('candidatos').insert({
-          id: nuevoMock.id,
-          partido_id: candidato.partidoId,
-          nombre: candidato.nombre,
-          apellido: candidato.apellido,
-          cedula: candidato.cedula,
-          cargo: candidato.cargo,
-          numero_tarjeton: candidato.numeroTarjeton,
-          numero_lista: candidato.numeroLista,
-          departamento_id: candidato.departamentoId,
-          municipio_id: candidato.municipioId,
-          foto_url: candidato.fotoUrl,
+        const { error } = await supabase.from('candidatos').insert({
+          id: nuevo.id,
+          partido_id: nuevo.partidoId,
+          nombre: nuevo.nombre,
+          apellido: nuevo.apellido,
+          cedula: nuevo.cedula,
+          cargo: nuevo.cargo,
+          numero_tarjeton: nuevo.numeroTarjeton,
+          numero_lista: nuevo.numeroLista,
+          departamento_id: nuevo.departamentoId,
+          municipio_id: nuevo.municipioId,
+          foto_url: nuevo.fotoUrl,
         });
+
+        if (error) throw new Error(error.message);
       } catch (e) {
-        console.warn('Error guardando candidato en Supabase:', e);
+        console.error('[Supabase] Error guardando candidato:', e);
+        throw e;
       }
     }
 
-    return nuevoMock;
+    supabaseMock.addCandidato(nuevo);
+    return nuevo;
   }
 
   // ---------------------------------------------------------------------
@@ -652,7 +691,7 @@ export class SupabaseService {
       const { data, error } = await supabase
         .from('actors')
         .select('*')
-        .order('creado_en', { ascending: false });
+        .order('created_at', { ascending: false });
 
       if (error || !data || data.length === 0) {
         return supabaseMock.getActors();
@@ -661,7 +700,7 @@ export class SupabaseService {
       return data.map((a: any) => ({
         id: a.id,
         nombre: a.nombre,
-        role: a.role,
+        role: normalizeActorRole(a.role ?? a.rol, a.nivel),
         nivel: a.nivel,
         candidatoId: a.candidato_id,
         supervisorId: a.supervisor_id,
@@ -670,7 +709,7 @@ export class SupabaseService {
         scopeId: a.scope_id,
         userId: a.user_id,
         territorio: a.territorio,
-        creadoEn: a.creado_en,
+        creadoEn: a.created_at ?? a.creado_en,
       }));
     } catch (err) {
       return supabaseMock.getActors();
@@ -678,29 +717,52 @@ export class SupabaseService {
   }
 
   static async saveActor(actor: Omit<Actor, 'id' | 'creadoEn'>): Promise<Actor> {
-    const nuevoMock = supabaseMock.addActor(actor as Actor);
+    const nuevo: Actor = {
+      ...actor,
+      id: generateUuid(),
+      creadoEn: new Date().toISOString(),
+    };
+
+    supabaseMock.addActor(nuevo);
 
     if (isSupabaseConfigured() && supabase) {
+      // El enum actor_role de PostgreSQL usa estos valores en la BD real.
+      const roleDb =
+        nuevo.role === 'totalSupervisor'
+          ? 'supervisor_total'
+          : nuevo.role === 'candidateSupervisor'
+          ? 'supervisor_candidato'
+          : nuevo.role === 'leader'
+          ? 'lider'
+          : nuevo.role === 'witness'
+          ? 'testigo'
+          : 'votante';
+
       try {
-        await supabase.from('actors').insert({
-          id: nuevoMock.id,
-          nombre: actor.nombre,
-          role: actor.role,
-          nivel: actor.nivel,
-          candidato_id: actor.candidatoId,
-          supervisor_id: actor.supervisorId,
-          leader_id: actor.leaderId,
-          scope_level: actor.scopeLevel,
-          scope_id: actor.scopeId,
-          user_id: actor.userId,
-          territorio: actor.territorio,
+        const { error } = await supabase.from('actors').insert({
+          id: nuevo.id,
+          nombre: nuevo.nombre,
+          rol: roleDb,
+          role: roleDb,
+          nivel: nuevo.nivel ?? 0,
+          candidato_id: nuevo.candidatoId ?? null,
+          supervisor_id: nuevo.supervisorId ?? null,
+          leader_id: nuevo.leaderId ?? null,
+          scope_level: nuevo.scopeLevel ?? null,
+          scope_id: nuevo.scopeId ?? null,
+          user_id: nuevo.userId ?? null,
+          territorio: nuevo.territorio ?? null,
         });
+
+        if (error) {
+          console.error('[Supabase] Error guardando actor:', error.message);
+        }
       } catch (e) {
-        console.warn('Error guardando actor en Supabase:', e);
+        console.error('[Supabase] Error guardando actor:', e);
       }
     }
 
-    return nuevoMock;
+    return nuevo;
   }
 
   static async updateActorRole(id: string, updates: Partial<Actor>): Promise<void> {

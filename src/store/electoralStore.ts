@@ -266,6 +266,11 @@ export const useElectoralStore = create<ElectoralState>((set, get) => ({
   addPartido: async (partidoData) => {
     const nuevo = await SupabaseService.savePartido(partidoData as Partido);
     set({ partidos: [nuevo, ...get().partidos] });
+    get().addToast({
+      type: 'success',
+      title: 'Partido registrado',
+      message: `${nuevo.nombre} (${nuevo.siglas}) fue creado exitosamente`,
+    });
     return nuevo;
   },
 

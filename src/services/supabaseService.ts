@@ -54,6 +54,16 @@ function describeSupabaseError(
     return `Ya existe un registro con esos datos en ${tabla}. Verifica que las siglas o la cédula no estén repetidas.`;
   }
 
+  // Columna obligatoria (NOT NULL) que la aplicación no envía: esquema viejo.
+  const notNull = /null value in column "([^"]+)" of relation/i.exec(message);
+  if (error.code === '23502' || notNull) {
+    const columna = notNull ? ` "${notNull[1]}"` : '';
+    if (tabla === 'candidatos') {
+      return `La tabla candidatos exige el campo${columna} y la aplicación no lo envía. Ejecuta supabase/fix_candidatos_partido.sql para quitar la obligatoriedad de la columna antigua "partido".`;
+    }
+    return `La tabla ${tabla} exige el campo${columna} y la aplicación no lo envía. Actualiza el esquema de la base de datos.`;
+  }
+
   // Violación de llave foránea: Postgres indica el campo, el valor y la tabla faltante.
   const fk = /Key \(([^)]+)\)=\(([^)]*)\) is not present in table "([^"]+)"/i.exec(details);
   if (error.code === '23503' || lower.includes('foreign key')) {

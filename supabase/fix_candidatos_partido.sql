@@ -60,8 +60,13 @@ ALTER TABLE public.candidatos ADD COLUMN IF NOT EXISTS foto_url TEXT;
 ALTER TABLE public.candidatos ADD COLUMN IF NOT EXISTS creado_en TIMESTAMPTZ DEFAULT NOW();
 
 -- ------------------------------------------------------------------------------
--- 4. Si existe una columna antigua "partido" (texto), enlazarla por nombre o siglas
+-- 4. Columna antigua "partido" (texto): enlazarla y dejar de exigirla
 -- ------------------------------------------------------------------------------
+-- En instalaciones viejas, "partido" es TEXT NOT NULL. La aplicación guarda la
+-- relación real en partido_id y ya no envía "partido", así que esa columna
+-- bloquea cada inserción con:
+--   null value in column "partido" of relation "candidatos" violates not-null
+-- Aquí se rellena partido_id desde el texto y se vuelve opcional la columna vieja.
 DO $$
 BEGIN
   IF EXISTS (
@@ -72,6 +77,7 @@ BEGIN
       AND column_name = 'partido'
       AND data_type IN ('text', 'character varying')
   ) THEN
+    -- 4.1 Enlazar por nombre o siglas los registros que aún no tienen partido_id.
     EXECUTE $sql$
       UPDATE public.candidatos c
       SET partido_id = p.id
@@ -82,6 +88,52 @@ BEGIN
           OR lower(trim(c.partido)) = lower(trim(p.siglas))
         )
     $sql$;
+
+    -- 4.2 Completar el texto viejo desde la relación, para reportes antiguos.
+    EXECUTE $sql$
+      UPDATE public.candidatos c
+      SET partido = p.nombre
+      FROM public.partidos p
+      WHERE c.partido_id = p.id
+        AND (c.partido IS NULL OR btrim(c.partido) = '')
+    $sql$;
+
+    -- 4.3 Ya no puede ser obligatoria: la app inserta solo partido_id.
+    EXECUTE 'ALTER TABLE public.candidatos ALTER COLUMN partido DROP NOT NULL';
+
+    -- 4.4 Mantener el texto sincronizado con partido_id en escrituras futuras.
+    EXECUTE $ddl$
+      CREATE OR REPLACE FUNCTION public.sync_candidato_partido_texto()
+      RETURNS trigger AS $fn$
+      BEGIN
+        -- Si llega solo el texto viejo, resolver la relación.
+        IF NEW.partido_id IS NULL
+           AND NEW.partido IS NOT NULL
+           AND btrim(NEW.partido) <> '' THEN
+          SELECT p.id INTO NEW.partido_id
+          FROM public.partidos p
+          WHERE lower(btrim(p.nombre)) = lower(btrim(NEW.partido))
+             OR lower(btrim(p.siglas)) = lower(btrim(NEW.partido))
+          LIMIT 1;
+        END IF;
+
+        -- Si llega la relación, mantener lleno el texto viejo.
+        IF NEW.partido_id IS NOT NULL
+           AND (NEW.partido IS NULL OR btrim(NEW.partido) = '') THEN
+          SELECT p.nombre INTO NEW.partido
+          FROM public.partidos p
+          WHERE p.id = NEW.partido_id;
+        END IF;
+
+        RETURN NEW;
+      END;
+      $fn$ LANGUAGE plpgsql
+    $ddl$;
+
+    DROP TRIGGER IF EXISTS trg_sync_candidato_partido_texto ON public.candidatos;
+    CREATE TRIGGER trg_sync_candidato_partido_texto
+      BEFORE INSERT OR UPDATE ON public.candidatos
+      FOR EACH ROW EXECUTE FUNCTION public.sync_candidato_partido_texto();
   END IF;
 END $$;
 

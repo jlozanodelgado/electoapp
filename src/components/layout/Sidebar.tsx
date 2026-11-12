@@ -15,7 +15,8 @@ import {
   Clock,
   User,
   Home,
-  Shield
+  Shield,
+  Phone
 } from 'lucide-react';
 
 export const Sidebar: React.FC = () => {
@@ -71,6 +72,12 @@ export const Sidebar: React.FC = () => {
       desc: 'Curules, Metas y Exportación',
       icon: <BarChart3 className="w-5 h-5" />,
     },
+    {
+      id: 'testigo_mobile',
+      label: 'Testigo Móvil',
+      desc: 'Actas E-14 y fotos desde el celular',
+      icon: <Phone className="w-5 h-5" />,
+    },
   ];
 
   // Filtro de módulos por rol
@@ -86,7 +93,7 @@ export const Sidebar: React.FC = () => {
       },
     ];
   } else if (isTestigo) {
-    navItems = allNavItems.filter(i => i.id === 'mapa' || i.id === 'dia_d');
+    navItems = allNavItems.filter(i => i.id === 'mapa' || i.id === 'dia_d' || i.id === 'testigo_mobile');
   } else if (isLider) {
     navItems = allNavItems.filter(i => i.id !== 'ejecutivo');
   }

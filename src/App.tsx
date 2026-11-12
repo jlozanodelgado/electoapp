@@ -15,6 +15,7 @@ import { EditVoterModal } from './components/modals/EditVoterModal';
 import { CandidatosModule } from './components/modules/CandidatosModule';
 import { PreparacionModule } from './components/modules/PreparacionModule';
 import { TerritoryDashboard } from './components/modules/TerritoryDashboard';
+import { TestigoMobilePage } from './components/modules/TestigoMobilePage';
 import { DigitalizeE14Modal } from './components/modals/DigitalizeE14Modal';
 import { FraudAlertModal } from './components/modals/FraudAlertModal';
 import { ToastContainer } from './components/ui/ToastContainer';
@@ -106,6 +107,7 @@ export const App: React.FC = () => {
               {moduloActivo === 'dia_d' && <DayDModule />}
               {moduloActivo === 'ejecutivo' && <ExecutiveDashboardModule />}
               {moduloActivo === 'admin' && <AdminPanelModule />}
+              {moduloActivo === 'testigo_mobile' && <TestigoMobilePage />}
 
               {isMobile && (
                 <div className="absolute bottom-6 right-6 flex flex-col gap-2 z-50">

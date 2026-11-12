@@ -752,6 +752,8 @@ export class SupabaseService {
           scope_id: nuevo.scopeId ?? null,
           user_id: nuevo.userId ?? null,
           territorio: nuevo.territorio ?? null,
+          created_at: nuevo.creadoEn,
+          updated_at: new Date().toISOString(),
         });
 
         if (error) {

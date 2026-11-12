@@ -112,6 +112,8 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
       candidato_id: actor.candidatoId || null,
       leader_id: actor.leaderId || null,
       territorio: actor.scopeId ? { scopeLevel: actor.scopeLevel, scopeId: actor.scopeId } : null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     };
 
     const { data, error } = await getSupabase()

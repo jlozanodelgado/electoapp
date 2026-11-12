@@ -53,6 +53,19 @@ CREATE TABLE IF NOT EXISTS public.candidatos (
   creado_en TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Si la tabla ya existía con un esquema anterior, CREATE TABLE IF NOT EXISTS no
+-- agrega las columnas nuevas. Las aseguramos explícitamente.
+ALTER TABLE public.candidatos ADD COLUMN IF NOT EXISTS partido_id UUID;
+ALTER TABLE public.candidatos ADD COLUMN IF NOT EXISTS apellido TEXT;
+ALTER TABLE public.candidatos ADD COLUMN IF NOT EXISTS cedula TEXT;
+ALTER TABLE public.candidatos ADD COLUMN IF NOT EXISTS cargo TEXT;
+ALTER TABLE public.candidatos ADD COLUMN IF NOT EXISTS numero_tarjeton TEXT;
+ALTER TABLE public.candidatos ADD COLUMN IF NOT EXISTS numero_lista TEXT;
+ALTER TABLE public.candidatos ADD COLUMN IF NOT EXISTS departamento_id TEXT;
+ALTER TABLE public.candidatos ADD COLUMN IF NOT EXISTS municipio_id TEXT;
+ALTER TABLE public.candidatos ADD COLUMN IF NOT EXISTS foto_url TEXT;
+ALTER TABLE public.candidatos ADD COLUMN IF NOT EXISTS creado_en TIMESTAMPTZ DEFAULT NOW();
+
 ALTER TABLE public.candidatos ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS candidatos_lectura_publica ON public.candidatos;

@@ -44,8 +44,8 @@ function describeSupabaseError(message: string, tabla: string): string {
   if (lower.includes('foreign key')) {
     return 'El registro hace referencia a un partido, departamento o municipio que no existe en la base de datos.';
   }
-  if (lower.includes('row-level security')) {
-    return `La base de datos rechazó la operación por permisos (RLS) en ${tabla}.`;
+  if (lower.includes('row-level security') || lower.includes('permission denied')) {
+    return `Tu usuario no tiene permisos para escribir en ${tabla}. Pide al administrador que ejecute supabase/fix_rls_permissions.sql en el SQL Editor de Supabase.`;
   }
   if (lower.includes('invalid input syntax for type uuid')) {
     return 'Se generó un identificador inválido. Recarga la página e inténtalo de nuevo.';

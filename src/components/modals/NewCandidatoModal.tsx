@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useElectoralStore } from '../../store/electoralStore';
 import { Button } from '../ui/Button';
 import { X, User, Building, ImageOff, Flag } from 'lucide-react';
+import { Departamento } from '../../types/electoral';
+import { Municipio } from '../../types/electoral';
 
 export const NewCandidatoModal: React.FC = () => {
   const {
@@ -13,6 +15,8 @@ export const NewCandidatoModal: React.FC = () => {
     setIsNewPartidoOpen,
     editingCandidato,
     updateCandidato,
+    departamentos,
+    municipios,
   } = useElectoralStore();
   const [partidoId, setPartidoId] = useState('');
   const [nombre, setNombre] = useState('');
@@ -35,30 +39,28 @@ export const NewCandidatoModal: React.FC = () => {
     { value: 'representante', label: 'Representante a la Cámara' },
   ];
 
-  const departamentos = [
-    { id: 'valle', nombre: 'Valle del Cauca' },
-    { id: 'cundinamarca', nombre: 'Cundinamarca / Bogotá D.C.' },
-    { id: 'antioquia', nombre: 'Antioquia' },
+  // Departamentos y municipios desde Supabase (con fallback al mock inicial)
+  const departamentosDisponibles: Departamento[] = departamentos.length > 0 ? departamentos : [
+    { id: 'valle', nombre: 'Valle del Cauca', codigo: '76', censo: 3780000, curules: 13, coordenadas: [4.0847, -76.1954], zoom: 11, partidoDominante: 'coalicion', participacionPct: 59.4 },
+    { id: 'cundinamarca', nombre: 'Cundinamarca / Bogotá D.C.', codigo: '25', censo: 8450000, curules: 18, coordenadas: [4.6500, -74.0833], zoom: 11, partidoDominante: 'coalicion', participacionPct: 62.4 },
+    { id: 'antioquia', nombre: 'Antioquia', codigo: '05', censo: 5120000, curules: 17, coordenadas: [6.2442, -75.5812], zoom: 11, partidoDominante: 'alianza', participacionPct: 58.7 },
   ];
 
-  const municipiosPorDepartamento: Record<string, { id: string; nombre: string }[]> = {
-    valle: [
-      { id: 'tulua', nombre: 'Tuluá' },
-      { id: 'cali', nombre: 'Cali' },
-      { id: 'buga', nombre: 'Guadalajara de Buga' },
-      { id: 'palmira', nombre: 'Palmira' },
-    ],
-    cundinamarca: [
-      { id: 'bogota', nombre: 'Bogotá D.C.' },
-      { id: 'soacha', nombre: 'Soacha' },
-      { id: 'chía', nombre: 'Chía' },
-    ],
-    antioquia: [
-      { id: 'medellin', nombre: 'Medellín' },
-      { id: 'envigado', nombre: 'Envigado' },
-      { id: 'itaguí', nombre: 'Itagüí' },
-    ],
-  };
+  const municipiosDisponiblesStore: Municipio[] = municipios.length > 0 ? municipios : [
+    { id: 'tulua', departamentoId: 'valle', nombre: 'Tuluá', codigo: '76834', censo: 178500, curules: 17, coordenadas: [4.0847, -76.1954], zoom: 13, zonas: [], partidoDominante: 'coalicion', participacionPct: 61.2 },
+    { id: 'buga', departamentoId: 'valle', nombre: 'Guadalajara de Buga', codigo: '76111', censo: 105000, curules: 17, coordenadas: [3.9009, -76.2978], zoom: 13, zonas: [], partidoDominante: 'coalicion', participacionPct: 58.5 },
+    { id: 'cali', departamentoId: 'valle', nombre: 'Santiago de Cali', codigo: '76001', censo: 1950000, curules: 21, coordenadas: [3.4350, -76.5300], zoom: 12, zonas: [], partidoDominante: 'coalicion', participacionPct: 57.9 },
+  ];
+
+  // Construir mapa de municipios por departamento dinámicamente
+  const municipiosPorDepartamento = useMemo(() => {
+    const mapa: Record<string, { id: string; nombre: string }[]> = {};
+    municipiosDisponiblesStore.forEach(m => {
+      if (!mapa[m.departamentoId]) mapa[m.departamentoId] = [];
+      mapa[m.departamentoId].push({ id: m.id, nombre: m.nombre });
+    });
+    return mapa;
+  }, [municipiosDisponiblesStore]);
 
   const [municipioId, setMunicipioId] = useState('');
   const [keepOpen, setKeepOpen] = useState(false);

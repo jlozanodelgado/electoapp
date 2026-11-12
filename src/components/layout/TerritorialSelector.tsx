@@ -1,6 +1,6 @@
 import React from 'react';
 import { useElectoralStore } from '../../store/electoralStore';
-import { DEPARTAMENTOS, MUNICIPIOS } from '../../data/mockElectoralData';
+import { DEPARTAMENTOS as MOCK_DEPARTAMENTOS, MUNICIPIOS as MOCK_MUNICIPIOS } from '../../data/mockElectoralData';
 import { MapPin, Globe, Compass, ChevronRight } from 'lucide-react';
 
 export const TerritorialSelector: React.FC = () => {
@@ -14,15 +14,18 @@ export const TerritorialSelector: React.FC = () => {
     setZona,
     selectedPuestoId,
     setSelectedPuestoId,
-    puestos
+    puestos,
+    departamentos,
+    municipios,
   } = useElectoralStore();
 
-  const departamentosDisponibles = DEPARTAMENTOS;
+  const departamentosDisponibles = departamentos.length > 0 ? departamentos : MOCK_DEPARTAMENTOS;
+  const municipiosDisponiblesStore = municipios.length > 0 ? municipios : MOCK_MUNICIPIOS;
   const municipiosDisponibles = departamentoId === 'todos' 
-    ? MUNICIPIOS 
-    : MUNICIPIOS.filter(m => m.departamentoId === departamentoId);
+    ? municipiosDisponiblesStore 
+    : municipiosDisponiblesStore.filter(m => m.departamentoId === departamentoId);
 
-  const municipioActual = MUNICIPIOS.find(m => m.id === municipioId);
+  const municipioActual = municipiosDisponiblesStore.find(m => m.id === municipioId);
   const zonasDisponibles = municipioActual ? municipioActual.zonas : [];
 
   const puestoActual = puestos.find(p => p.id === selectedPuestoId);

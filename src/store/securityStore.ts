@@ -5,6 +5,23 @@ import { Actor, ScopeLevel } from '../types/security';
 import { getSupabase } from '../services/getSupabase';
 import type { User } from '@supabase/supabase-js';
 
+// Correspondencia entre el rol de la app y el enum almacenado en PostgreSQL.
+const ROLE_TO_DB: Record<Actor['role'], string> = {
+  totalSupervisor: 'supervisor_total',
+  candidateSupervisor: 'supervisor_candidato',
+  leader: 'lider',
+  witness: 'testigo',
+  voter: 'votante',
+};
+
+const ROLE_TO_NIVEL: Record<Actor['role'], number> = {
+  totalSupervisor: 0,
+  candidateSupervisor: 1,
+  leader: 2,
+  witness: 3,
+  voter: 4,
+};
+
 // Helper to normalize an actor coming from PostgreSQL
 function normalizeActor(raw: any): Actor {
   const rawRol = String(raw.role || raw.rol || '').toLowerCase();
@@ -26,6 +43,7 @@ function normalizeActor(raw: any): Actor {
     ...raw,
     role,
     candidatoId: raw.candidatoId ?? raw.candidato_id,
+    supervisorId: raw.supervisorId ?? raw.supervisor_id,
     scopeLevel: raw.scopeLevel ?? raw.scope_level,
     scopeId: raw.scopeId ?? raw.scope_id,
     leaderId: raw.leaderId ?? raw.leader_id,
@@ -78,28 +96,8 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
     set({ actors: normalized });
   },
   createActor: async (actor) => {
-    const nivel =
-      actor.role === 'totalSupervisor'
-        ? 0
-        : actor.role === 'candidateSupervisor'
-        ? 1
-        : actor.role === 'leader'
-        ? 2
-        : actor.role === 'witness'
-        ? 3
-        : 4;
-
-    // En la base de datos se almacena en el formato que espera el enum
-    const rolDb =
-      actor.role === 'totalSupervisor'
-        ? 'supervisor_total'
-        : actor.role === 'candidateSupervisor'
-        ? 'supervisor_candidato'
-        : actor.role === 'leader'
-        ? 'lider'
-        : actor.role === 'witness'
-        ? 'testigo'
-        : 'votante';
+    const nivel = ROLE_TO_NIVEL[actor.role];
+    const rolDb = ROLE_TO_DB[actor.role];
 
     const dbPayload = {
       nombre: actor.nombre,
@@ -110,6 +108,7 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
       scope_level: actor.scopeLevel || null,
       scope_id: actor.scopeId || null,
       candidato_id: actor.candidatoId || null,
+      supervisor_id: actor.supervisorId || null,
       leader_id: actor.leaderId || null,
       territorio: actor.scopeId ? { scopeLevel: actor.scopeLevel, scopeId: actor.scopeId } : null,
       created_at: new Date().toISOString(),
@@ -132,8 +131,28 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
     return newActor;
   },
   updateActor: async (id, updates) => {
-    const { error } = await getSupabase().from('actors').update(updates).eq('id', id);
-    if (error) console.warn('Update actor error', error);
+    const dbUpdates: Record<string, unknown> = { updated_at: new Date().toISOString() };
+
+    if (updates.nombre !== undefined) dbUpdates.nombre = updates.nombre.trim();
+    if (updates.role !== undefined) {
+      const rolDb = ROLE_TO_DB[updates.role];
+      dbUpdates.role = rolDb;
+      dbUpdates.rol = rolDb;
+      dbUpdates.nivel = ROLE_TO_NIVEL[updates.role];
+    }
+    if (updates.candidatoId !== undefined) dbUpdates.candidato_id = updates.candidatoId || null;
+    if (updates.supervisorId !== undefined) dbUpdates.supervisor_id = updates.supervisorId || null;
+    if (updates.leaderId !== undefined) dbUpdates.leader_id = updates.leaderId || null;
+    if (updates.scopeLevel !== undefined) dbUpdates.scope_level = updates.scopeLevel || null;
+    if (updates.scopeId !== undefined) dbUpdates.scope_id = updates.scopeId || null;
+    if (updates.user_id !== undefined) dbUpdates.user_id = updates.user_id || null;
+
+    const { error } = await getSupabase().from('actors').update(dbUpdates).eq('id', id);
+    if (error) {
+      console.error('Error actualizando actor en Supabase:', error);
+      throw new Error(error.message || 'No se pudo actualizar el actor.');
+    }
+
     const { data } = await getSupabase().from('actors').select('*');
     set({ actors: (data || []).map(normalizeActor) });
   },

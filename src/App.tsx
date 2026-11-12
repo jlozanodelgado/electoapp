@@ -9,6 +9,9 @@ import { ExecutiveDashboardModule } from './components/modules/ExecutiveDashboar
 import { AdminPanelModule } from './components/modules/AdminPanelModule';
 import { NewWitnessModal } from './components/modals/NewWitnessModal';
 import { NewVoterModal } from './components/modals/NewVoterModal';
+import { EditActorModal } from './components/modals/EditActorModal';
+import { EditTestigoModal } from './components/modals/EditTestigoModal';
+import { EditVoterModal } from './components/modals/EditVoterModal';
 import { CandidatosModule } from './components/modules/CandidatosModule';
 import { PreparacionModule } from './components/modules/PreparacionModule';
 import { TerritoryDashboard } from './components/modules/TerritoryDashboard';
@@ -25,7 +28,7 @@ export const App: React.FC = () => {
   const getCurrentActorId = useSecurityStore(state => state.getCurrentActorId);
   const currentActorId = useSecurityStore(state => state.currentActorId);
   const actors = useSecurityStore(state => state.actors);
-  const { moduloActivo, setModuloActivo, setActorId, loadHierarchicalData } = useElectoralStore();
+  const { moduloActivo, setModuloActivo, setActorId, loadHierarchicalData, editingActor, editingTestigo, editingVoter } = useElectoralStore();
 
   const currentActor = actors.find(a => a.id === currentActorId);
   const currentActorRole = currentActor?.role ?? null;
@@ -131,6 +134,9 @@ export const App: React.FC = () => {
       )}
       <NewWitnessModal />
       <NewVoterModal />
+      {editingActor && <EditActorModal actor={editingActor as any} />}
+      {editingTestigo && <EditTestigoModal testigo={editingTestigo} />}
+      {editingVoter && <EditVoterModal votante={editingVoter} />}
       <DigitalizeE14Modal />
       <FraudAlertModal />
       <ToastContainer />

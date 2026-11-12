@@ -59,6 +59,9 @@ export const AdminPanelModule: React.FC = () => {
   const setIsNewVoterOpen = useElectoralStore(s => s.setIsNewVoterOpen);
   const openEditPartido = useElectoralStore(s => s.openEditPartido);
   const openEditCandidato = useElectoralStore(s => s.openEditCandidato);
+  const setEditingActor = useElectoralStore(s => s.setEditingActor);
+  const openEditTestigo = useElectoralStore(s => s.openEditTestigo);
+  const openEditVoter = useElectoralStore(s => s.openEditVoter);
   const deleteActor = useSecurityStore(s => s.deleteActor);
 
   const [tab, setTab] = useState<AdminTab>('partidos');
@@ -294,6 +297,13 @@ export const AdminPanelModule: React.FC = () => {
                       <Badge variant={ROLE_BADGE[a.role] || 'slate'} size="sm">
                         {ROLE_LABELS[a.role] || a.role}
                       </Badge>
+                      <button
+                        onClick={() => setEditingActor(a as any)}
+                        className="p-1.5 rounded-lg text-slate-500 hover:text-emerald-400 hover:bg-emerald-500/10 border border-transparent hover:border-emerald-500/30 transition-colors"
+                        title="Editar actor"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
                       {a.role !== 'totalSupervisor' && (
                         <button
                           onClick={() => {
@@ -326,7 +336,16 @@ export const AdminPanelModule: React.FC = () => {
                         <p className="text-xs font-semibold text-white truncate">{t.nombre}</p>
                         <p className="text-[10px] text-slate-500 truncate">Mesa {t.mesaNumero} · {t.puestoNombre}</p>
                       </div>
-                      <Badge variant={t.estado === 'confirmado' ? 'emerald' : 'slate'} size="sm">{t.estado}</Badge>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <Badge variant={t.estado === 'confirmado' ? 'emerald' : 'slate'} size="sm">{t.estado}</Badge>
+                        <button
+                          onClick={() => openEditTestigo(t)}
+                          className="p-1.5 rounded-lg text-slate-500 hover:text-emerald-400 hover:bg-emerald-500/10 border border-transparent hover:border-emerald-500/30 transition-colors"
+                          title="Editar testigo"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
                   ))
                 )}
@@ -344,9 +363,18 @@ export const AdminPanelModule: React.FC = () => {
                         <p className="text-xs font-semibold text-white truncate">{v.nombre}</p>
                         <p className="text-[10px] text-slate-500 truncate">{v.intencionVoto} · {v.liderAsignado || 'Sin líder'}</p>
                       </div>
-                      <Badge variant={v.yaVoto ? 'emerald' : v.contactado ? 'blue' : 'slate'} size="sm">
-                        {v.yaVoto ? 'Ya votó' : v.contactado ? 'Contactado' : 'Pendiente'}
-                      </Badge>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <Badge variant={v.yaVoto ? 'emerald' : v.contactado ? 'blue' : 'slate'} size="sm">
+                          {v.yaVoto ? 'Ya votó' : v.contactado ? 'Contactado' : 'Pendiente'}
+                        </Badge>
+                        <button
+                          onClick={() => openEditVoter(v)}
+                          className="p-1.5 rounded-lg text-slate-500 hover:text-emerald-400 hover:bg-emerald-500/10 border border-transparent hover:border-emerald-500/30 transition-colors"
+                          title="Editar votante"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
                   ))
                 )}

@@ -37,6 +37,9 @@ export interface BaseActor {
   leader_id?: string;
   // Link to Supabase Auth user (optional, added for real DB integration)
   user_id?: string;
+  // Supervisor of a leader (candidate supervisor)
+  supervisorId?: string;
+  supervisor_id?: string;
 }
 
 

@@ -115,13 +115,27 @@ interface ElectoralState {
   addToast: (toast: Omit<Toast, 'id' | 'timestamp'>) => void;
   removeToast: (id: string) => void;
 
-  // Partidos y Candidatos
+  // Edición de partidos y candidatos
   addPartido: (partido: Omit<Partido, 'id' | 'creadoEn'>) => void;
   addCandidato: (candidato: Omit<Candidato, 'id' | 'creadoEn'>) => void;
   openEditPartido: (partido: Partido) => void;
   openEditCandidato: (candidato: Candidato) => void;
   updatePartido: (id: string, partido: Omit<Partido, 'id' | 'creadoEn'>) => Promise<Partido>;
   updateCandidato: (id: string, candidato: Omit<Candidato, 'id' | 'creadoEn'>) => Promise<Candidato>;
+
+  // Edición de actores (desde securityStore)
+  editingActor: Actor | null;
+  setEditingActor: (actor: Actor | null) => void;
+
+  // Edición de testigos y votantes
+  editingTestigo: TestigoElectoral | null;
+  editingVoter: VotanteCRM | null;
+  setEditingTestigo: (testigo: TestigoElectoral | null) => void;
+  setEditingVoter: (votante: VotanteCRM | null) => void;
+  openEditTestigo: (testigo: TestigoElectoral) => void;
+  openEditVoter: (votante: VotanteCRM) => void;
+  updateTestigo: (id: string, updates: Partial<TestigoElectoral>) => Promise<TestigoElectoral[]>;
+  updateVotante: (id: string, updates: Partial<VotanteCRM>) => Promise<VotanteCRM[]>;
 
   // Actores jerárquicos
   addActor: (actor: Omit<Actor, 'id' | 'creadoEn'>) => void;
@@ -185,6 +199,9 @@ export const useElectoralStore = create<ElectoralState>((set, get) => ({
   alertaSeleccionada: null,
   editingPartido: null,
   editingCandidato: null,
+  editingActor: null,
+  editingTestigo: null,
+  editingVoter: null,
 
   isSimulandoDiaD: false,
   diaDProgresoPct: 42,
@@ -330,6 +347,47 @@ export const useElectoralStore = create<ElectoralState>((set, get) => ({
     return actualizado;
   },
 
+  setEditingActor: (actor) => set({ editingActor: actor }),
+
+  openEditTestigo: (testigo) =>
+    set({ editingTestigo: testigo, isNewWitnessOpen: true }),
+
+  openEditVoter: (votante) =>
+    set({ editingVoter: votante, isNewVoterOpen: true }),
+
+  setEditingTestigo: (testigo) => set({ editingTestigo: testigo }),
+  setEditingVoter: (votante) => set({ editingVoter: votante }),
+
+  updateTestigo: async (id, updates) => {
+    const actualizados = await SupabaseService.updateTestigo(id, updates);
+    const actualizado = actualizados.find(t => t.id === id) ?? actualizados[0];
+    set(state => ({
+      testigos: state.testigos.map(t => (t.id === id ? actualizado : t)),
+      editingTestigo: null,
+    }));
+    get().addToast({
+      type: 'success',
+      title: 'Testigo actualizado',
+      message: `${actualizado.nombre} fue actualizado exitosamente`,
+    });
+    return actualizados;
+  },
+
+  updateVotante: async (id, updates) => {
+    const actualizados = await SupabaseService.updateVotante(id, updates);
+    const actualizado = actualizados.find(v => v.id === id) ?? actualizados[0];
+    set(state => ({
+      votantes: state.votantes.map(v => (v.id === id ? actualizado : v)),
+      editingVoter: null,
+    }));
+    get().addToast({
+      type: 'success',
+      title: 'Votante actualizado',
+      message: `${actualizado.nombre} fue actualizado exitosamente`,
+    });
+    return actualizados;
+  },
+
   // Actores jerárquicos
   addActor: async (actorData) => {
     const { actorRole: creadorRole, actorId: creadorId } = get();
@@ -393,8 +451,8 @@ export const useElectoralStore = create<ElectoralState>((set, get) => ({
     set({ partidos, candidatos, actors, puestos, testigos, votantes, actas, alertas });
   },
 
-  setIsNewWitnessOpen: (open) => set({ isNewWitnessOpen: open }),
-  setIsNewVoterOpen: (open) => set({ isNewVoterOpen: open }),
+  setIsNewWitnessOpen: (open) => set({ isNewWitnessOpen: open, editingTestigo: null }),
+  setIsNewVoterOpen: (open) => set({ isNewVoterOpen: open, editingVoter: null }),
   setIsNewPartidoOpen: (open: boolean) => set({ isNewPartidoOpen: open, editingPartido: null }),
   setIsNewCandidatoOpen: (open: boolean) => set({ isNewCandidatoOpen: open, editingCandidato: null }),
   setIsDigitalizeE14Open: (open) => set({ isDigitalizeE14Open: open }),

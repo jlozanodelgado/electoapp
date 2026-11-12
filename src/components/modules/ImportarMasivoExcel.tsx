@@ -22,9 +22,9 @@ const COLUMNAS_REQUERIDAS: Record<HojaTipo, string[]> = {
     'direccion', 'lat', 'lng', 'censo_electoral', 'mesas_habilitadas',
     'meta_votos_campana', 'votos_proyectados',
   ],
-  partidos: ['id', 'nombre', 'siglas', 'color', 'logo_url'],
+  partidos: ['nombre', 'siglas', 'color', 'logo_url'],
   candidatos: [
-    'id', 'partido_id', 'nombre', 'apellido', 'cedula', 'cargo',
+    'partido_id', 'nombre', 'apellido', 'cedula', 'cargo',
     'numero_tarjeton', 'numero_lista', 'departamento_id', 'municipio_id', 'foto_url',
   ],
 };
@@ -65,15 +65,13 @@ const COLUMNAS_EJEMPLO: Record<HojaTipo, Record<string, string | number>> = {
     votos_proyectados: 700,
   },
   partidos: {
-    id: 'partido-001',
     nombre: 'Coalición Por el Cambio',
     siglas: 'CPC',
     color: '#10b981',
     logo_url: 'https://ejemplo.com/logo.png',
   },
   candidatos: {
-    id: 'candidato-001',
-    partido_id: 'partido-001',
+    partido_id: '550e8400-e29b-41d4-a716-446655440000',
     nombre: 'Juan Carlos',
     apellido: 'Pérez Gómez',
     cedula: '12345678',
@@ -238,6 +236,21 @@ export const ImportarMasivoExcel: React.FC = () => {
           .filter((z: string) => z.length > 0);
       }
 
+      // Validar UUID si se proporcionan campos de tipo uuid
+      const uuidCampos: string[] = [];
+      if (registro.id) uuidCampos.push('id');
+      if (hojaSeleccionada === 'candidatos') {
+        if (registro.partido_id) uuidCampos.push('partido_id');
+      }
+
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      uuidCampos.forEach((campo) => {
+        if (registro[campo] && !uuidRegex.test(String(registro[campo]))) {
+          errores.push(`Fila ${i + 1}: el campo "${campo}" debe ser un UUID válido (ej. 550e8400-e29b-41d4-a716-446655440000).`);
+          filaValida = false;
+        }
+      });
+
       if (filaValida) registros.push(registro);
     }
 
@@ -286,28 +299,59 @@ export const ImportarMasivoExcel: React.FC = () => {
             return;
           }
 
-          // Insertar en Supabase
-          const { error } = await sb
-            .from(hojaSeleccionada)
-            .upsert(registros, { onConflict: 'id' });
+          // Filtrar campos nulos/undefined para no enviarlos a Supabase
+          // (deja que las columnas con DEFAULT se llenen solas)
+          const registrosLimpios = registros.map((r) => {
+            const limpio: Record<string, any> = {};
+            Object.keys(r).forEach((k) => {
+              if (r[k] !== null && r[k] !== undefined && r[k] !== '') {
+                limpio[k] = r[k];
+              }
+            });
+            return limpio;
+          });
 
-          if (error) {
-            setErrorValidacion(`Error de base de datos: ${error.message}`);
-            setCargando(false);
-            return;
+          // Separar registros que traen id y los que no (para tablas con id autogenerado)
+          const registrosConId = registrosLimpios.filter((r) => r.id);
+          const registrosSinId = registrosLimpios.filter((r) => !r.id);
+
+          let insertados = 0;
+
+          // Upsert para los que tienen id
+          if (registrosConId.length > 0) {
+            const { error } = await sb
+              .from(hojaSeleccionada)
+              .upsert(registrosConId, { onConflict: 'id' });
+            if (error) {
+              setErrorValidacion(`Error de base de datos (upsert): ${error.message}`);
+              setCargando(false);
+              return;
+            }
+            insertados += registrosConId.length;
+          }
+
+          // Insert simple para los que no traen id (ej. partidos, candidatos con id autogenerado)
+          if (registrosSinId.length > 0) {
+            const { error } = await sb.from(hojaSeleccionada).insert(registrosSinId);
+            if (error) {
+              setErrorValidacion(`Error de base de datos (insert): ${error.message}`);
+              setCargando(false);
+              return;
+            }
+            insertados += registrosSinId.length;
           }
 
           const res: ImportResult = {
             tabla: hojaSeleccionada,
-            total: registros.length,
-            exitosos: registros.length,
+            total: registrosLimpios.length,
+            exitosos: insertados,
             errores,
           };
           setResultado(res);
           addToast({
             type: 'success',
             title: 'Importación completada',
-            message: `${registros.length} registros insertados/actualizados en ${hojaSeleccionada}.`,
+            message: `${insertados} registros insertados/actualizados en ${hojaSeleccionada}.`,
           });
         } catch (err: any) {
           setErrorValidacion(err.message || 'Error inesperado durante la importación.');

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useElectoralStore, ModuloActivo } from '../../store/electoralStore';
 import { useSecurityStore } from '../../store/securityStore';
+import { Partido, Candidato } from '../../types/electoral';
 import { 
   Map, 
   Target, 
@@ -17,17 +18,25 @@ import {
   Home,
   Shield,
   Phone,
-  MapPin
+  MapPin,
+  Image,
+  Flag
 } from 'lucide-react';
 
 export const Sidebar: React.FC = () => {
-  const { moduloActivo, setModuloActivo, puestos, testigos, votantes } = useElectoralStore();
-  const { actorRole } = useElectoralStore();
+  const { moduloActivo, setModuloActivo, puestos, testigos, votantes, partidos, candidatos } = useElectoralStore();
+  const { actorRole, actorId, actors } = useElectoralStore();
   const [collapsed, setCollapsed] = useState(false);
 
   const isTestigo = actorRole === 'testigo';
   const isLider = actorRole === 'leader';
   const isSupervisor = actorRole === 'totalSupervisor' || actorRole === 'candidateSupervisor';
+  const isCandidateSupervisor = actorRole === 'candidateSupervisor';
+
+  // Obtener el actor actual y sus datos de partido/candidato
+  const actor = actors.find(a => a.id === actorId);
+  const candidato = candidatos.find(c => c.id === actor?.candidatoId);
+  const partido = partidos.find(p => p.id === candidato?.partidoId);
   const isTotalSupervisor = actorRole === 'totalSupervisor';
 
   const allNavItems: Array<{ id: ModuloActivo; label: string; desc: string; icon: React.ReactNode }> = [
@@ -139,6 +148,37 @@ export const Sidebar: React.FC = () => {
             {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
           </button>
         </div>
+
+        {/* Cabecera personalizada para Supervisor de Candidato */}
+        {isCandidateSupervisor && partido && candidato && (
+          <div className="mb-4 p-3 rounded-xl border border-slate-800/50 relative overflow-hidden">
+            {/* Fondo con color del partido */}
+            <div className="absolute inset-0 bg-[color:{partido.color}] opacity-20 rounded-xl" />
+            <div className="relative z-10 flex flex-col p-3">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-10 h-10 rounded-full bg-white/20 border border-white/30 overflow-hidden">
+                  {candidato.fotoUrl ? (
+                    <img src={candidato.fotoUrl} alt={candidato.nombre} className="w-full h-full object-cover" />
+                  ) : (
+                    <Image className="w-6 h-6 text-white/80" />
+                  )}
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-white" style={{ color: partido.color }}>
+                    {partido.nombre}
+                  </p>
+                  <p className="text-[10px] font-semibold text-white/90 uppercase tracking-wider">
+                    {partido.siglas}
+                  </p>
+                </div>
+              </div>
+              <div className="pt-2 border-t border-white/20">
+                <p className="text-xs font-medium text-white">Candidato</p>
+                <p className="text-sm font-bold text-white">{candidato.nombre}</p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Modules navigation */}
         <nav className="space-y-1.5">

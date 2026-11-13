@@ -1444,4 +1444,275 @@ export class SupabaseService {
       supabase?.removeChannel(channel);
     };
   }
+
+  // ---------------------------------------------------------------------
+  // Migración de datos del mock (localStorage) a Supabase
+  // ---------------------------------------------------------------------
+  static async migrateMockToSupabase(): Promise<{
+    partidos: { insertados: number; errores: string[] };
+    candidatos: { insertados: number; errores: string[] };
+    puestos: { insertados: number; errores: string[] };
+    actores: { insertados: number; errores: string[] };
+    testigos: { insertados: number; errores: string[] };
+    votantes: { insertados: number; errores: string[] };
+    actas: { insertados: number; errores: string[] };
+    alertas: { insertados: number; errores: string[] };
+  }> {
+    if (!isSupabaseConfigured() || !supabase) {
+      throw new Error('Supabase no está configurado.');
+    }
+
+    const resumen = {
+      partidos: { insertados: 0, errores: [] as string[] },
+      candidatos: { insertados: 0, errores: [] as string[] },
+      puestos: { insertados: 0, errores: [] as string[] },
+      actores: { insertados: 0, errores: [] as string[] },
+      testigos: { insertados: 0, errores: [] as string[] },
+      votantes: { insertados: 0, errores: [] as string[] },
+      actas: { insertados: 0, errores: [] as string[] },
+      alertas: { insertados: 0, errores: [] as string[] },
+    };
+
+    // Helper para mapear rol de app a rol de BD
+    const rolADB = (role: string): string => {
+      switch (role) {
+        case 'totalSupervisor': return 'supervisor_total';
+        case 'candidateSupervisor': return 'supervisor_candidato';
+        case 'leader': return 'lider';
+        case 'witness': return 'testigo';
+        case 'voter': return 'votante';
+        default: return 'votante';
+      }
+    };
+
+    // -----------------------------------------------------------------
+    // 1. Partidos
+    // -----------------------------------------------------------------
+    const partidos = supabaseMock.getPartidos();
+    for (const p of partidos) {
+      try {
+        const { error } = await supabase.from('partidos').insert({
+          id: p.id,
+          nombre: p.nombre,
+          siglas: p.siglas,
+          color: p.color ?? null,
+          logo_url: p.logoUrl ?? null,
+          creado_en: p.creadoEn ?? new Date().toISOString(),
+        });
+        if (error) throw error;
+        resumen.partidos.insertados++;
+      } catch (e: any) {
+        resumen.partidos.errores.push(`Partido ${p.nombre}: ${e.message}`);
+      }
+    }
+
+    // -----------------------------------------------------------------
+    // 2. Candidatos
+    // -----------------------------------------------------------------
+    const candidatos = supabaseMock.getCandidatos();
+    for (const c of candidatos) {
+      try {
+        const { error } = await supabase.from('candidatos').insert({
+          id: c.id,
+          partido_id: c.partidoId,
+          nombre: c.nombre,
+          apellido: c.apellido ?? null,
+          cedula: c.cedula,
+          cargo: c.cargo,
+          departamento_id: c.departamentoId ?? null,
+          municipio_id: c.municipioId ?? null,
+          foto_url: c.fotoUrl ?? null,
+          partido: c.partidoId ?? null, // columna legacy
+          numero_tarjeton: c.numeroTarjeton ?? null,
+          numero_lista: c.numeroLista ?? null,
+          creado_en: c.creadoEn ?? new Date().toISOString(),
+        });
+        if (error) throw error;
+        resumen.candidatos.insertados++;
+      } catch (e: any) {
+        resumen.candidatos.errores.push(`Candidato ${c.cedula}: ${e.message}`);
+      }
+    }
+
+    // -----------------------------------------------------------------
+    // 3. Puestos de votación
+    // -----------------------------------------------------------------
+    const puestos = supabaseMock.getPuestos();
+    for (const p of puestos) {
+      try {
+        const { error } = await supabase.from('puestos_votacion').insert({
+          id: p.id,
+          nombre: p.nombre,
+          municipio_id: p.municipioId,
+          departamento_id: p.departamentoId,
+          zona: p.zona,
+          comuna_barrio: p.comunaBarrio,
+          direccion: p.direccion,
+          lat: p.lat,
+          lng: p.lng,
+          censo_electoral: p.censoElectoral,
+          mesas_habilitadas: p.mesasHabilitadas,
+          meta_votos_campana: p.metaVotosCampana,
+          votos_proyectados: p.votosProyectados,
+          estado_prioridad: p.estadoPrioridad,
+          partido_dominante: p.partidoDominante,
+          margen_victoria_pct: p.margenVictoriaPct,
+          participacion_historica_pct: p.participacionHistoricaPct,
+          abstencionismo_pct: p.abstencionismoPct,
+          cobertura_testigos_pct: p.coberturaTestigosPct,
+        });
+        if (error) throw error;
+        resumen.puestos.insertados++;
+      } catch (e: any) {
+        resumen.puestos.errores.push(`Puesto ${p.nombre}: ${e.message}`);
+      }
+    }
+
+    // -----------------------------------------------------------------
+    // 4. Actores
+    // -----------------------------------------------------------------
+    const actores = supabaseMock.getActors();
+    for (const a of actores) {
+      try {
+        const { error } = await supabase.from('actors').insert({
+          id: a.id,
+          nombre: a.nombre,
+          rol: rolADB(a.role),
+          role: rolADB(a.role),
+          nivel: a.nivel ?? 0,
+          candidato_id: a.candidatoId ?? null,
+          supervisor_id: a.supervisorId ?? null,
+          leader_id: a.leaderId ?? null,
+          scope_level: a.scopeLevel ?? null,
+          scope_id: a.scopeId ?? null,
+          user_id: a.userId ?? null,
+          territorio: a.territorio ?? null,
+          created_at: a.creadoEn ?? new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        });
+        if (error) throw error;
+        resumen.actores.insertados++;
+      } catch (e: any) {
+        resumen.actores.errores.push(`Actor ${a.nombre}: ${e.message}`);
+      }
+    }
+
+    // -----------------------------------------------------------------
+    // 5. Testigos electorales
+    // -----------------------------------------------------------------
+    const testigos = supabaseMock.getTestigos();
+    for (const t of testigos) {
+      try {
+        const { error } = await supabase.from('testigos_electorales').insert({
+          id: t.id,
+          puesto_id: t.puestoId,
+          puesto_nombre: t.puestoNombre,
+          mesa_numero: t.mesaNumero,
+          nombre: t.nombre,
+          cedula: t.cedula,
+          telefono: t.telefono,
+          rol: t.rol,
+          estado: t.estado,
+          hora_llegada: t.horaLlegada ?? null,
+          leader_id: t.leaderId ?? null,
+          actor_id: null,
+        });
+        if (error) throw error;
+        resumen.testigos.insertados++;
+      } catch (e: any) {
+        resumen.testigos.errores.push(`Testigo ${t.cedula}: ${e.message}`);
+      }
+    }
+
+    // -----------------------------------------------------------------
+    // 6. Votantes CRM
+    // -----------------------------------------------------------------
+    const votantes = supabaseMock.getVotantes();
+    for (const v of votantes) {
+      try {
+        const { error } = await supabase.from('votantes_crm').insert({
+          id: v.id,
+          puesto_id: v.puestoId,
+          nombre: v.nombre,
+          cedula: v.cedula,
+          telefono: v.telefono,
+          direccion: v.direccion,
+          barrio: v.barrio,
+          intencion_voto: v.intencionVoto,
+          lider_asignado: v.liderAsignado,
+          contactado: v.contactado,
+          necesita_transporte: v.necesitaTransporte,
+          ya_voto: v.yaVoto,
+          leader_id: v.leaderId ?? null,
+          actor_id: null,
+          lat: v.lat ?? null,
+          lng: v.lng ?? null,
+        });
+        if (error) throw error;
+        resumen.votantes.insertados++;
+      } catch (e: any) {
+        resumen.votantes.errores.push(`Votante ${v.cedula}: ${e.message}`);
+      }
+    }
+
+    // -----------------------------------------------------------------
+    // 7. Actas E-14
+    // -----------------------------------------------------------------
+    const actas = supabaseMock.getActasE14();
+    for (const a of actas) {
+      try {
+        const { error } = await supabase.from('actas_e14').insert({
+          id: a.id,
+          puesto_id: a.puestoId,
+          mesa_numero: a.mesaNumero,
+          hora_reporte: a.horaReporte,
+          digitalizado_por: a.digitalizadoPor ?? null,
+          votos_coalicion: a.votosCoalicion,
+          votos_alianza: a.votosAlianza,
+          votos_unidad: a.votosUnidad,
+          votos_otros: a.votosOtros,
+          votos_blanco: a.votosBlanco,
+          votos_nulos: a.votosNulos,
+          votos_no_marcados: a.votosNoMarcados ?? 0,
+          total_votos_urna: a.totalVotosUrna,
+          estado_revision: a.estadoRevision,
+          foto_acta_url: a.fotoActaUrl ?? null,
+          leader_id: a.leaderId ?? null,
+          actor_id: null,
+        });
+        if (error) throw error;
+        resumen.actas.insertados++;
+      } catch (e: any) {
+        resumen.actas.errores.push(`Acta ${a.id}: ${e.message}`);
+      }
+    }
+
+    // -----------------------------------------------------------------
+    // 8. Alertas de fraude
+    // -----------------------------------------------------------------
+    const alertas = supabaseMock.getAlertas();
+    for (const al of alertas) {
+      try {
+        const { error } = await supabase.from('alertas_fraude').insert({
+          id: al.id,
+          puesto_id: al.puestoId,
+          puesto_nombre: al.puestoNombre,
+          mesa_numero: al.mesaNumero,
+          severidad: al.severidad,
+          tipo: al.tipo,
+          descripcion: al.descripcion,
+          timestamp: al.timestamp,
+          resuelta: al.resuelta,
+          leader_id: al.leaderId ?? null,
+          actor_id: null,
+        });
+        if (error) throw error;
+        resumen.alertas.insertados++;
+      } catch (e: any) {
+        resumen.alertas.errores.push(`Alerta ${al.id}: ${e.message}`);
+      }
+    }
+
+    return resumen;
+  }
 }

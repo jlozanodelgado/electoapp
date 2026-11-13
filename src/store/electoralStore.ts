@@ -155,6 +155,17 @@ interface ElectoralState {
   addActaE14: (acta: Omit<ActaE14, 'id'>) => void;
   resolverAlerta: (id: string) => void;
 
+  // Migración de mock a Supabase
+  migrateMockToSupabase: () => Promise<{
+    partidos: { insertados: number; errores: string[] };
+    candidatos: { insertados: number; errores: string[] };
+    puestos: { insertados: number; errores: string[] };
+    actores: { insertados: number; errores: string[] };
+    testigos: { insertados: number; errores: string[] };
+    votantes: { insertados: number; errores: string[] };
+    actas: { insertados: number; errores: string[] };
+    alertas: { insertados: number; errores: string[] };
+  }>;
   // Simulación
   toggleSimulacionDiaD: () => void;
   tickSimulacion: () => void;
@@ -560,6 +571,10 @@ export const useElectoralStore = create<ElectoralState>((set, get) => ({
       diaDProgresoPct: 42,
       isSimulandoDiaD: false,
     });
-  }
-}));
+  },
+
+  migrateMockToSupabase: async () => {
+    return SupabaseService.migrateMockToSupabase();
+  },
+}));;
 

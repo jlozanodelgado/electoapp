@@ -16,7 +16,8 @@ import {
   User,
   Home,
   Shield,
-  Phone
+  Phone,
+  MapPin
 } from 'lucide-react';
 
 export const Sidebar: React.FC = () => {
@@ -77,6 +78,12 @@ export const Sidebar: React.FC = () => {
       label: 'Testigo Móvil',
       desc: 'Actas E-14 y fotos desde el celular',
       icon: <Phone className="w-5 h-5" />,
+    },
+    {
+      id: 'coordinador_puesto',
+      label: 'Mi Puesto',
+      desc: 'Ver mesas y actas de mi puesto',
+      icon: <MapPin className="w-5 h-5" />,
     },
   ];
 

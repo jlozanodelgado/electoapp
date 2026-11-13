@@ -2,30 +2,29 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useSecurityStore } from '../../store/securityStore';
 import { useElectoralStore } from '../../store/electoralStore';
 import { Button } from '../ui/Button';
-import { X, Upload, Phone, CheckCircle, AlertCircle, Cloud, WifiOff, Save } from 'lucide-react';
+import { X, Upload, Phone, CheckCircle, AlertCircle, Cloud, WifiOff, Save, Plus, Trash2, MapPin } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '../../services/supabaseClient';
 
 const COLA_KEY = 'electoapp_actas_pendientes_movil';
 
-interface ActaE14Data {
-  puesto_id: string;
-  mesa_numero: number;
-  votos_coalicion: number;
-  votos_alianza: number;
-  votos_unidad: number;
-  votos_otros: number;
-  votos_blanco: number;
-  votos_nulos: number;
-  total_votos_urna: number;
-  estado_revision: 'pendiente_verificacion';
-  foto_acta_url?: string;
-  hora_reporte: string;
+interface MesaActa {
+  id: string;
+  mesaNumero: number;
+  votosCoalicion: number;
+  votosAlianza: number;
+  votosUnidad: number;
+  votosOtros: number;
+  votosBlanco: number;
+  votosNulos: number;
+  totalVotos: number;
+  fotoBase64?: string;
+  horaReporte: string;
 }
 
 interface ActaPendiente {
   id: string;
-  datos: ActaE14Data;
-  fotoBase64?: string;
+  puesto_id: string;
+  mesas: MesaActa[];
   timestamp: number;
 }
 
@@ -101,33 +100,35 @@ export const TestigoMobilePage: React.FC = () => {
   const actor = currentActor();
   const isTestigo = actorRole === 'witness';
 
-  // Buscar el testigo asignado a este actor (por nombre coincidente)
+  // Buscar el testigo asignado a este actor
   const testigoAsignado = testigos.find(
     (t) => t.nombre === actor?.nombre || t.leaderId === actor?.id,
   );
 
   const puestoId = testigoAsignado?.puestoId || '';
   const puestoNombre = testigoAsignado?.puestoNombre || 'Sin puesto asignado';
-  const mesaActual = testigoAsignado?.mesaNumero || '';
 
   const [online, setOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
   const [cargando, setCargando] = useState(false);
   const [subiendo, setSubiendo] = useState(false);
-  const [fotoFile, setFotoFile] = useState<File | null>(null);
-  const [fotoBase64, setFotoBase64] = useState<string | null>(null);
-  const [vistaPrevia, setVistaPrevia] = useState<string | null>(null);
   const [colaPendiente, setColaPendiente] = useState<ActaPendiente[]>([]);
   const [mensaje, setMensaje] = useState<{ tipo: 'exito' | 'error'; texto: string } | null>(null);
 
-  // Formulario - solo mesa es editable, puesto viene del testigo asignado
-  const [mesaNumero, setMesaNumero] = useState(mesaActual?.toString() || '');
-  const [votosCoalicion, setVotosCoalicion] = useState('0');
-  const [votosAlianza, setVotosAlianza] = useState('0');
-  const [votosUnidad, setVotosUnidad] = useState('0');
-  const [votosOtros, setVotosOtros] = useState('0');
-  const [votosBlanco, setVotosBlanco] = useState('0');
-  const [votosNulos, setVotosNulos] = useState('0');
-  const [observaciones, setObservaciones] = useState('');
+  // Formulario de múltiples mesas
+  const [mesas, setMesas] = useState<MesaActa[]>([
+    {
+      id: `mesa-${Date.now()}-1`,
+      mesaNumero: 1,
+      votosCoalicion: 0,
+      votosAlianza: 0,
+      votosUnidad: 0,
+      votosOtros: 0,
+      votosBlanco: 0,
+      votosNulos: 0,
+      totalVotos: 0,
+      horaReporte: new Date().toISOString(),
+    },
+  ]);
 
   // ------------------------------------------------------------
   // Estado de conexión
@@ -161,42 +162,47 @@ export const TestigoMobilePage: React.FC = () => {
   }, []);
 
   // ------------------------------------------------------------
-  // Manejo de foto con compresión
+  // Agregar / quitar mesa
   // ------------------------------------------------------------
-  const manejarFoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (!file.type.startsWith('image/')) {
-      setMensaje({ tipo: 'error', texto: 'Selecciona una imagen válida.' });
-      return;
-    }
-
-    if (file.size > 5 * 1024 * 1024) {
-      setMensaje({ tipo: 'error', texto: 'La imagen es muy grande (máx. 5 MB).' });
-      return;
-    }
-
-    setFotoFile(file);
-    setCargando(true);
-
-    try {
-      const base64 = await comprimirImagen(file, 1024, 0.6);
-      setFotoBase64(base64);
-      setVistaPrevia(base64);
-      setMensaje(null);
-    } catch (err) {
-      setMensaje({ tipo: 'error', texto: 'Error comprimiendo la imagen.' });
-      console.error(err);
-    } finally {
-      setCargando(false);
-    }
+  const agregarMesa = () => {
+    const nuevoId = `mesa-${Date.now()}-${mesas.length + 1}`;
+    setMesas(prev => [
+      ...prev,
+      {
+        id: nuevoId,
+        mesaNumero: prev.length + 1,
+        votosCoalicion: 0,
+        votosAlianza: 0,
+        votosUnidad: 0,
+        votosOtros: 0,
+        votosBlanco: 0,
+        votosNulos: 0,
+        totalVotos: 0,
+        horaReporte: new Date().toISOString(),
+      },
+    ]);
   };
 
-  const quitarFoto = () => {
-    setFotoFile(null);
-    setFotoBase64(null);
-    setVistaPrevia(null);
+  const quitarMesa = (id: string) => {
+    setMesas(prev => prev.filter(m => m.id !== id));
+  };
+
+  const actualizarVotoMesa = (mesaId: string, campo: keyof MesaActa, valor: string | number) => {
+    setMesas(prev => prev.map(m => {
+      if (m.id === mesaId) {
+        const actualizado = { ...m, [campo]: valor };
+        // Recalcular total
+        actualizado.totalVotos =
+          Number(actualizado.votosCoalicion || 0) +
+          Number(actualizado.votosAlianza || 0) +
+          Number(actualizado.votosUnidad || 0) +
+          Number(actualizado.votosOtros || 0) +
+          Number(actualizado.votosBlanco || 0) +
+          Number(actualizado.votosNulos || 0);
+        return actualizado;
+      }
+      return m;
+    }));
   };
 
   // ------------------------------------------------------------
@@ -204,22 +210,25 @@ export const TestigoMobilePage: React.FC = () => {
   // ------------------------------------------------------------
   const validarFormulario = (): string | null => {
     if (!puestoId) return 'No tienes un puesto asignado. Contacta al administrador.';
-    if (!mesaNumero) return 'Ingresa el número de mesa.';
-    const total =
-      Number(votosCoalicion || 0) +
-      Number(votosAlianza || 0) +
-      Number(votosUnidad || 0) +
-      Number(votosOtros || 0) +
-      Number(votosBlanco || 0) +
-      Number(votosNulos || 0);
-    if (total === 0) return 'Ingresa al menos un voto.';
+    if (mesas.length === 0) return 'Debe agregar al menos una mesa.';
+    for (const mesa of mesas) {
+      if (!mesa.mesaNumero) return `La mesa ${mesa.id} necesita número de mesa.`;
+      const total =
+        Number(mesa.votosCoalicion || 0) +
+        Number(mesa.votosAlianza || 0) +
+        Number(mesa.votosUnidad || 0) +
+        Number(mesa.votosOtros || 0) +
+        Number(mesa.votosBlanco || 0) +
+        Number(mesa.votosNulos || 0);
+      if (total === 0) return `La mesa ${mesa.mesaNumero} necesita al menos un voto.`;
+    }
     return null;
   };
 
   // ------------------------------------------------------------
-  // Guardar acta (online o offline)
+  // Guardar actas (online o offline)
   // ------------------------------------------------------------
-  const guardarActa = async (e: React.FormEvent) => {
+  const guardarActas = async (e: React.FormEvent) => {
     e.preventDefault();
     const error = validarFormulario();
     if (error) {
@@ -227,43 +236,24 @@ export const TestigoMobilePage: React.FC = () => {
       return;
     }
 
-    const totalVotos =
-      Number(votosCoalicion || 0) +
-      Number(votosAlianza || 0) +
-      Number(votosUnidad || 0) +
-      Number(votosOtros || 0) +
-      Number(votosBlanco || 0) +
-      Number(votosNulos || 0);
-
-    const datos: ActaE14Data = {
-      puesto_id: puestoId,
-      mesa_numero: Number(mesaNumero),
-      votos_coalicion: Number(votosCoalicion || 0),
-      votos_alianza: Number(votosAlianza || 0),
-      votos_unidad: Number(votosUnidad || 0),
-      votos_otros: Number(votosOtros || 0),
-      votos_blanco: Number(votosBlanco || 0),
-      votos_nulos: Number(votosNulos || 0),
-      total_votos_urna: totalVotos,
-      estado_revision: 'pendiente_verificacion',
-      hora_reporte: new Date().toISOString(),
-    };
-
     const id = `acta-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
     const ahora = new Date().toISOString();
 
     const guardarLocalmente = (): void => {
       const pendiente: ActaPendiente = {
         id,
-        datos,
-        fotoBase64: fotoBase64 || undefined,
+        puesto_id: puestoId,
+        mesas: mesas.map(m => ({
+          ...m,
+          horaReporte: ahora,
+        })),
         timestamp: Date.now(),
       };
       const cola = obtenerCola();
       cola.push(pendiente);
       guardarCola(cola);
       setColaPendiente(cola);
-      setMensaje({ tipo: 'exito', texto: 'Acta guardada localmente. Se subirá cuando haya internet.' });
+      setMensaje({ tipo: 'exito', texto: 'Actas guardadas localmente. Se subirán cuando haya internet.' });
       limpiarFormulario();
     };
 
@@ -279,43 +269,36 @@ export const TestigoMobilePage: React.FC = () => {
     setMensaje(null);
 
     try {
-      let fotoUrl: string | undefined;
+      for (const mesa of mesas) {
+        const actaId = `${id}-mesa-${mesa.mesaNumero}`;
+        const { error } = await supabase.from('actas_e14').insert({
+          id: actaId,
+          puesto_id: puestoId,
+          mesa_numero: mesa.mesaNumero,
+          hora_reporte: mesa.horaReporte,
+          digitalizado_por: actor?.id ?? null,
+          votos_coalicion: mesa.votosCoalicion,
+          votos_alianza: mesa.votosAlianza,
+          votos_unidad: mesa.votosUnidad,
+          votos_otros: mesa.votosOtros,
+          votos_blanco: mesa.votosBlanco,
+          votos_nulos: mesa.votosNulos,
+          votos_no_marcados: 0,
+          total_votos_urna: mesa.totalVotos,
+          estado_revision: 'pendiente_verificacion',
+          foto_acta_url: mesa.fotoBase64 ?? null,
+          leader_id: actor?.id ?? null,
+          created_at: ahora,
+          updated_at: ahora,
+        });
 
-      if (fotoBase64) {
-        fotoUrl = fotoBase64;
+        if (error) throw error;
       }
 
-      const actaConFoto = {
-        ...datos,
-        foto_acta_url: fotoUrl,
-      };
-
-      const { error } = await supabase.from('actas_e14').insert({
-        id,
-        puesto_id: actaConFoto.puesto_id,
-        mesa_numero: actaConFoto.mesa_numero,
-        votos_coalicion: actaConFoto.votos_coalicion,
-        votos_alianza: actaConFoto.votos_alianza,
-        votos_unidad: actaConFoto.votos_unidad,
-        votos_otros: actaConFoto.votos_otros,
-        votos_blanco: actaConFoto.votos_blanco,
-        votos_nulos: actaConFoto.votos_nulos,
-        total_votos_urna: actaConFoto.total_votos_urna,
-        estado_revision: actaConFoto.estado_revision,
-        foto_acta_url: actaConFoto.foto_acta_url,
-        hora_reporte: actaConFoto.hora_reporte,
-        digitalizado_por: actor?.id || null,
-        leader_id: actor?.id || null,
-        created_at: ahora,
-        updated_at: ahora,
-      });
-
-      if (error) throw error;
-
-      setMensaje({ tipo: 'exito', texto: 'Acta E-14 enviada correctamente.' });
+      setMensaje({ tipo: 'exito', texto: `${mesas.length} acta(s) enviada(s) correctamente.` });
       limpiarFormulario();
     } catch (err: any) {
-      console.error('Error subiendo acta:', err);
+      console.error('Error subiendo actas:', err);
       guardarLocalmente();
       setMensaje({
         tipo: 'error',
@@ -341,27 +324,32 @@ export const TestigoMobilePage: React.FC = () => {
       try {
         if (!isSupabaseConfigured() || !supabase) break;
 
-        const { error } = await supabase.from('actas_e14').insert({
-          id: pendiente.id,
-          puesto_id: pendiente.datos.puesto_id,
-          mesa_numero: pendiente.datos.mesa_numero,
-          votos_coalicion: pendiente.datos.votos_coalicion,
-          votos_alianza: pendiente.datos.votos_alianza,
-          votos_unidad: pendiente.datos.votos_unidad,
-          votos_otros: pendiente.datos.votos_otros,
-          votos_blanco: pendiente.datos.votos_blanco,
-          votos_nulos: pendiente.datos.votos_nulos,
-          total_votos_urna: pendiente.datos.total_votos_urna,
-          estado_revision: pendiente.datos.estado_revision,
-          foto_acta_url: pendiente.fotoBase64 || null,
-          hora_reporte: pendiente.datos.hora_reporte,
-          digitalizado_por: actor?.id || null,
-          leader_id: actor?.id || null,
-          created_at: pendiente.datos.hora_reporte,
-          updated_at: new Date().toISOString(),
-        });
+        for (const mesa of pendiente.mesas) {
+          const actaId = `${pendiente.id}-mesa-${mesa.mesaNumero}`;
+          const { error } = await supabase.from('actas_e14').insert({
+            id: actaId,
+            puesto_id: pendiente.puesto_id,
+            mesa_numero: mesa.mesaNumero,
+            hora_reporte: mesa.horaReporte,
+            digitalizado_por: actor?.id ?? null,
+            votos_coalicion: mesa.votosCoalicion,
+            votos_alianza: mesa.votosAlianza,
+            votos_unidad: mesa.votosUnidad,
+            votos_otros: mesa.votosOtros,
+            votos_blanco: mesa.votosBlanco,
+            votos_nulos: mesa.votosNulos,
+            votos_no_marcados: 0,
+            total_votos_urna: mesa.totalVotos,
+            estado_revision: 'pendiente_verificacion',
+            foto_acta_url: mesa.fotoBase64 ?? null,
+            leader_id: actor?.id ?? null,
+            created_at: mesa.horaReporte,
+            updated_at: new Date().toISOString(),
+          });
 
-        if (error) throw error;
+          if (error) throw error;
+        }
+
         exitosas++;
         removerDeCola(pendiente.id);
       } catch (err) {
@@ -388,18 +376,23 @@ export const TestigoMobilePage: React.FC = () => {
   }, [actor?.id]);
 
   // ------------------------------------------------------------
-  // Limpiar formulario (mantiene el puesto asignado)
+  // Limpiar formulario
   // ------------------------------------------------------------
   const limpiarFormulario = () => {
-    setMesaNumero(mesaActual?.toString() || '');
-    setVotosCoalicion('0');
-    setVotosAlianza('0');
-    setVotosUnidad('0');
-    setVotosOtros('0');
-    setVotosBlanco('0');
-    setVotosNulos('0');
-    setObservaciones('');
-    quitarFoto();
+    setMesas([
+      {
+        id: `mesa-${Date.now()}-1`,
+        mesaNumero: 1,
+        votosCoalicion: 0,
+        votosAlianza: 0,
+        votosUnidad: 0,
+        votosOtros: 0,
+        votosBlanco: 0,
+        votosNulos: 0,
+        totalVotos: 0,
+        horaReporte: new Date().toISOString(),
+      },
+    ]);
   };
 
   // ------------------------------------------------------------
@@ -451,9 +444,9 @@ export const TestigoMobilePage: React.FC = () => {
       <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-3 mb-4">
         <div className="flex items-center gap-2 mb-2">
           <div className="w-6 h-6 rounded-full bg-blue-500/20 border border-blue-500/40 flex items-center justify-center text-blue-400 text-[10px]">
-            <X className="w-3 h-3" />
+            <MapPin className="w-3 h-3" />
           </div>
-          <h3 className="text-sm font-bold text-white">Puesto Asignado</h3>
+          <h3 className="font-bold text-white text-sm uppercase tracking-wider text-[10px]">Puesto Asignado</h3>
         </div>
         <div className="flex items-center justify-between">
           <span className="text-sm text-slate-300">{puestoNombre}</span>
@@ -468,175 +461,178 @@ export const TestigoMobilePage: React.FC = () => {
         )}
       </div>
 
-      {/* Formulario de acta E-14 */}
-      <form onSubmit={guardarActa} className="space-y-4 bg-slate-900/60 border border-slate-800 rounded-xl p-4">
+      {/* Formulario de actas E-14 (múltiples mesas) */}
+      <form onSubmit={guardarActas} className="space-y-4 bg-slate-900/60 border border-slate-800 rounded-xl p-4">
         <h2 className="text-sm font-semibold text-slate-300 mb-3 uppercase tracking-wider">
-          Nueva Acta E-14
+          Actas E-14 ({mesas.length} mesa(s))
         </h2>
 
-        <div>
-          <label className="block text-xs font-semibold text-slate-400 mb-1">
-            Mesa de Votación *
-          </label>
-          <input
-            type="number"
-            min="1"
-            max="150"
-            value={mesaNumero}
-            onChange={(e) => setMesaNumero(e.target.value)}
-            className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:outline-none focus:border-emerald-500"
-            placeholder="Ej. 5"
-          />
-        </div>
+        <div className="space-y-3">
+          {mesas.map((mesa, index) => (
+            <div key={mesa.id} className="p-3 rounded-lg bg-slate-950/60 border border-slate-800">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-5 h-5 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400 text-[9px]">
+                    #{mesa.mesaNumero}
+                  </div>
+                  <span className="text-xs font-semibold text-slate-300">Mesa {mesa.mesaNumero}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => quitarMesa(mesa.id)}
+                  disabled={mesas.length === 1}
+                  className="text-xs text-rose-400 hover:text-rose-300 disabled:opacity-30"
+                  title={mesas.length === 1 ? 'No se puede quitar la última mesa' : 'Quitar mesa'}
+                >
+                  <Trash2 className="w-3 h-3" />
+                </button>
+              </div>
 
-        <div className="grid grid-cols-3 gap-2">
-          <div>
-            <label className="block text-xs font-semibold text-slate-400 mb-1">
-              Coalición
-            </label>
-            <input
-              type="number"
-              min="0"
-              value={votosCoalicion}
-              onChange={(e) => setVotosCoalicion(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:outline-none focus:border-emerald-500"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-slate-400 mb-1">
-              Alianza
-            </label>
-            <input
-              type="number"
-              min="0"
-              value={votosAlianza}
-              onChange={(e) => setVotosAlianza(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:outline-none focus:border-emerald-500"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-slate-400 mb-1">
-              Unidad
-            </label>
-            <input
-              type="number"
-              min="0"
-              value={votosUnidad}
-              onChange={(e) => setVotosUnidad(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:outline-none focus:border-emerald-500"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-slate-400 mb-1">
-              Otros
-            </label>
-            <input
-              type="number"
-              min="0"
-              value={votosOtros}
-              onChange={(e) => setVotosOtros(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:outline-none focus:border-emerald-500"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-slate-400 mb-1">
-              Blanco
-            </label>
-            <input
-              type="number"
-              min="0"
-              value={votosBlanco}
-              onChange={(e) => setVotosBlanco(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:outline-none focus:border-emerald-500"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-slate-400 mb-1">
-              Nulos
-            </label>
-            <input
-              type="number"
-              min="0"
-              value={votosNulos}
-              onChange={(e) => setVotosNulos(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:outline-none focus:border-emerald-500"
-            />
-          </div>
-        </div>
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <label className="block text-[10px] font-semibold text-slate-400 mb-1">
+                    Coalición
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={mesa.votosCoalicion}
+                    onChange={(e) => actualizarVotoMesa(mesa.id, 'votosCoalicion', e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-1.5 text-slate-100 text-[11px] focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-semibold text-slate-400 mb-1">
+                    Alianza
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={mesa.votosAlianza}
+                    onChange={(e) => actualizarVotoMesa(mesa.id, 'votosAlianza', e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-1.5 text-slate-100 text-[11px] focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-semibold text-slate-400 mb-1">
+                    Unidad
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={mesa.votosUnidad}
+                    onChange={(e) => actualizarVotoMesa(mesa.id, 'votosUnidad', e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-1.5 text-slate-100 text-[11px] focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-2 mt-2">
+                <div>
+                  <label className="block text-[10px] font-semibold text-slate-400 mb-1">
+                    Otros
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={mesa.votosOtros}
+                    onChange={(e) => actualizarVotoMesa(mesa.id, 'votosOtros', e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-1.5 text-slate-100 text-[11px] focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-semibold text-slate-400 mb-1">
+                    Blanco
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={mesa.votosBlanco}
+                    onChange={(e) => actualizarVotoMesa(mesa.id, 'votosBlanco', e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-1.5 text-slate-100 text-[11px] focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-semibold text-slate-400 mb-1">
+                    Nulos
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={mesa.votosNulos}
+                    onChange={(e) => actualizarVotoMesa(mesa.id, 'votosNulos', e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-1.5 text-slate-100 text-[11px] focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+              </div>
+              <div className="mt-2 flex items-center gap-2">
+                <span className="text-[10px] text-slate-500">Total: <span className="font-bold text-white">{mesa.totalVotos}</span></span>
+              </div>
 
-        {/* Foto */}
-        <div>
-          <label className="block text-xs font-semibold text-slate-400 mb-1">
-            Foto del Acta E-14 *
-          </label>
-          <div className="flex items-center gap-3 mb-2">
-            <input
-              type="file"
-              accept="image/*"
-              onChange={manejarFoto}
-              disabled={cargando}
-              className="block w-full text-sm text-slate-400
-                file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0
-                file:text-sm file:font-semibold file:bg-blue-500/20 file:text-blue-400
-                hover:file:bg-blue-500/30 cursor-pointer disabled:opacity-50"
-            />
-            {fotoFile && (
-              <button
-                type="button"
-                onClick={quitarFoto}
-                className="text-xs text-rose-400 hover:text-rose-300"
-              >
-                Quitar
-              </button>
-            )}
-          </div>
-
-          {vistaPrevia && (
-            <div className="relative w-32 h-32 rounded-lg overflow-hidden border border-slate-700 bg-slate-800">
-              <img
-                src={vistaPrevia}
-                alt="Vista previa"
-                className="w-full h-full object-cover"
-              />
-              <button
-                type="button"
-                onClick={quitarFoto}
-                className="absolute top-1 right-1 bg-black/60 text-white p-1 rounded hover:bg-black/80"
-              >
-                <X className="w-3 h-3" />
-              </button>
+              {/* Foto por mesa */}
+              <div className="mt-3">
+                <label className="block text-[10px] font-semibold text-slate-400 mb-1">
+                  Foto del Acta Mesa {mesa.mesaNumero}
+                </label>
+                <div className="flex items-center gap-3 mb-2">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      if (!file.type.startsWith('image/')) {
+                        setMensaje({ tipo: 'error', texto: 'Selecciona una imagen válida.' });
+                        return;
+                      }
+                      if (file.size > 5 * 1024 * 1024) {
+                        setMensaje({ tipo: 'error', texto: 'La imagen es muy grande (máx. 5 MB).' });
+                        return;
+                      }
+                      setCargando(true);
+                      comprimirImagen(file, 1024, 0.6)
+                        .then((base64) => {
+                          setMesas(prev => prev.map(m => {
+                            if (m.id === mesa.id) return { ...m, fotoBase64: base64 };
+                            return m;
+                          }));
+                          setCargando(false);
+                        })
+                        .catch(() => {
+                          setMensaje({ tipo: 'error', texto: 'Error comprimiendo imagen.' });
+                          setCargando(false);
+                        });
+                    }}
+                    disabled={cargando}
+                    className="block w-full text-sm text-slate-400
+                      file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0
+                      file:text-sm file:font-semibold file:bg-blue-500/20 file:text-blue-400
+                      hover:file:bg-blue-500/30 cursor-pointer disabled:opacity-50"
+                  />
+                </div>
+              </div>
             </div>
-          )}
-          {cargando && (
-            <p className="text-[10px] text-slate-400 mt-1">Comprimiendo imagen...</p>
-          )}
-          <p className="text-[10px] text-slate-500 mt-1">
-            La foto se comprime automáticamente para usar pocos datos móviles.
-          </p>
+          ))}
         </div>
 
         <div className="pt-3 border-t border-slate-800 flex justify-end gap-2">
-          <button
+          <Button
             type="button"
-            onClick={limpiarFormulario}
-            disabled={subiendo}
-            className="px-3 py-2 text-sm text-slate-400 hover:text-white bg-slate-800/80 hover:bg-slate-800 rounded-xl transition-colors disabled:opacity-50"
+            variant="outline"
+            size="sm"
+            onClick={agregarMesa}
+            disabled={cargando || subiendo}
+            icon={<Plus className="w-3 h-3" />}
           >
-            Cancelar
-          </button>
+            Agregar Mesa
+          </Button>
           <Button
             type="submit"
             variant="primary"
             size="sm"
-            disabled={
-              subiendo ||
-              !online ||
-              cargando ||
-              !puestoId
-            }
+            disabled={subiendo || cargando || !online || !puestoId}
             icon={<Upload className="w-4 h-4" />}
           >
-            {subiendo ? 'Enviando…' : !online ? 'Sin internet' : 'Enviar Acta E-14'}
+            {subiendo ? 'Enviando…' : !online ? 'Sin internet' : 'Enviar Actas'}
           </Button>
         </div>
       </form>

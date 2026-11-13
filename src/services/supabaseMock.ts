@@ -10,6 +10,7 @@ import {
   Departamento,
   Municipio,
   Zona,
+  ActaVotoPartido,
 } from '../types/electoral';
 import {
   PUESTOS_VOTACION,
@@ -190,6 +191,16 @@ class SupabasePostGISMockService {
     const updated = this.getActasE14().map(a => (a.id === id ? { ...a, ...updates } : a));
     this.setStorage(STORAGE_KEYS.ACTAS, updated);
     return updated;
+  }
+
+  getActaVotosPartido(actaId: string): ActaVotoPartido[] {
+    // El mock no tiene tabla persistente de votos por partido, devuelve vacío
+    return [];
+  }
+
+  saveActaVotosPartido(actaId: string, votosPartido: { partidoId: string; votos: number }[]): void {
+    // El mock no persiste votos por partido
+    return;
   }
 
   // ---------------------------------------------------------------------

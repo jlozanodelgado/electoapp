@@ -13,6 +13,7 @@ import {
   Departamento,
   Municipio,
   Zona,
+  ActaVotoPartido,
 } from '../types/electoral';
 import { Toast, CuadranteTactico, TipoBasemap } from '../types/tactical';
 import { isPointInPolygon } from '../utils/geoUtils';
@@ -153,6 +154,7 @@ interface ElectoralState {
   addVotante: (votante: Omit<VotanteCRM, 'id'>) => void;
   toggleVotanteYaVoto: (id: string) => void;
   addActaE14: (acta: Omit<ActaE14, 'id'>) => void;
+  getActaVotosPartido: (actaId: string) => Promise<ActaVotoPartido[]>;
   resolverAlerta: (id: string) => void;
 
   // Migración de mock a Supabase
@@ -532,6 +534,10 @@ export const useElectoralStore = create<ElectoralState>((set, get) => ({
       actas: [acta, ...get().actas],
     });
     return acta;
+  },
+
+  getActaVotosPartido: async (actaId) => {
+    return SupabaseService.getActaVotosPartido(actaId);
   },
 
   resolverAlerta: async (id) => {

@@ -13,6 +13,7 @@ import {
   Departamento,
   Municipio,
   Zona,
+  ActaVotoPartido,
 } from '../types/electoral';
 
 /**
@@ -720,6 +721,73 @@ export class SupabaseService {
 
     const nuevoMock = supabaseMock.addActaE14(acta);
     return nuevoMock;
+  }
+
+  // ---------------------------------------------------------------------
+  // Votos por Partido en Acta E-14 (normalizado)
+  // ---------------------------------------------------------------------
+  static async getActaVotosPartido(actaId: string): Promise<ActaVotoPartido[]> {
+    if (!isSupabaseConfigured() || !supabase) {
+      return supabaseMock.getActaVotosPartido?.(actaId) ?? [];
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('acta_votos_partido')
+        .select(`
+          *,
+          partidos:partido_id (
+            nombre,
+            siglas
+          )
+        `)
+        .eq('acta_id', actaId);
+
+      if (error || !data) {
+        return supabaseMock.getActaVotosPartido?.(actaId) ?? [];
+      }
+
+      return data.map((d: any) => ({
+        id: d.id,
+        actaId: d.acta_id,
+        partidoId: d.partido_id,
+        partidoNombre: d.partidos?.nombre ?? 'Partido desconocido',
+        partidoSiglas: d.partidos?.siglas ?? '',
+        votos: d.votos,
+      }));
+    } catch (err) {
+      return supabaseMock.getActaVotosPartido?.(actaId) ?? [];
+    }
+  }
+
+  static async saveActaVotosPartido(
+    actaId: string,
+    votosPartido: { partidoId: string; votos: number }[],
+  ): Promise<void> {
+    if (!isSupabaseConfigured() || !supabase) {
+      // Guardar en mock
+      return;
+    }
+
+    try {
+      // Primero eliminar los votos existentes de esta acta
+      await supabase.from('acta_votos_partido').delete().eq('acta_id', actaId);
+
+      // Insertar los nuevos votos
+      if (votosPartido.length > 0) {
+        const { error } = await supabase.from('acta_votos_partido').insert(
+          votosPartido.map(v => ({
+            acta_id: actaId,
+            partido_id: v.partidoId,
+            votos: v.votos,
+          }))
+        );
+        if (error) throw error;
+      }
+    } catch (e) {
+      console.error('[Supabase] Error guardando votos por partido:', e);
+      throw e;
+    }
   }
 
   static async updateActaE14(id: string, updates: Partial<ActaE14>): Promise<ActaE14[]> {

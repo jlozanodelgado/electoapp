@@ -2,18 +2,16 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useSecurityStore } from '../../store/securityStore';
 import { useElectoralStore } from '../../store/electoralStore';
 import { Button } from '../ui/Button';
-import { X, Upload, Phone, CheckCircle, AlertCircle, Cloud, WifiOff, Save, Plus, Trash2, MapPin } from 'lucide-react';
+import { X, Upload, Phone, CheckCircle, AlertCircle, Cloud, WifiOff, Save, Plus, Trash2, Flag, MapPin } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '../../services/supabaseClient';
+import { Partido } from '../../types/electoral';
 
 const COLA_KEY = 'electoapp_actas_pendientes_movil';
 
 interface MesaActa {
   id: string;
   mesaNumero: number;
-  votosCoalicion: number;
-  votosAlianza: number;
-  votosUnidad: number;
-  votosOtros: number;
+  votosPartido: Record<string, number>; // partidoId -> votos
   votosBlanco: number;
   votosNulos: number;
   totalVotos: number;
@@ -92,9 +90,11 @@ export const TestigoMobilePage: React.FC = () => {
   const { currentActor } = useSecurityStore();
   const {
     puestos,
+    partidos,
     addActaE14,
     testigos,
     actorRole,
+    getActaVotosPartido,
   } = useElectoralStore();
 
   const actor = currentActor();
@@ -114,21 +114,34 @@ export const TestigoMobilePage: React.FC = () => {
   const [colaPendiente, setColaPendiente] = useState<ActaPendiente[]>([]);
   const [mensaje, setMensaje] = useState<{ tipo: 'exito' | 'error'; texto: string } | null>(null);
 
+  // Partidos inscritos (para mostrar como campos de voto)
+  const [partidosInscritos, setPartidosInscritos] = useState<Partido[]>([]);
+
   // Formulario de múltiples mesas
   const [mesas, setMesas] = useState<MesaActa[]>([
     {
       id: `mesa-${Date.now()}-1`,
       mesaNumero: 1,
-      votosCoalicion: 0,
-      votosAlianza: 0,
-      votosUnidad: 0,
-      votosOtros: 0,
+      votosPartido: {},
       votosBlanco: 0,
       votosNulos: 0,
       totalVotos: 0,
       horaReporte: new Date().toISOString(),
     },
   ]);
+
+  // Inicializar votosPartido con 0 para cada partido
+  useEffect(() => {
+    if (partidosInscritos.length > 0) {
+      setMesas(prev => prev.map(m => ({
+        ...m,
+        votosPartido: partidosInscritos.reduce((acc, p) => ({
+          ...acc,
+          [p.id]: m.votosPartido[p.id] ?? 0,
+        }), {} as Record<string, number>),
+      })));
+    }
+  }, [partidosInscritos]);
 
   // ------------------------------------------------------------
   // Estado de conexión
@@ -155,26 +168,31 @@ export const TestigoMobilePage: React.FC = () => {
   }, []);
 
   // ------------------------------------------------------------
-  // Cargar cola pendiente al iniciar
+  // Cargar partidos y cola pendiente al iniciar
   // ------------------------------------------------------------
   useEffect(() => {
     setColaPendiente(obtenerCola());
-  }, []);
+    if (partidos.length > 0) {
+      setPartidosInscritos(partidos);
+    }
+  }, [partidos]);
 
   // ------------------------------------------------------------
   // Agregar / quitar mesa
   // ------------------------------------------------------------
   const agregarMesa = () => {
     const nuevoId = `mesa-${Date.now()}-${mesas.length + 1}`;
+    const votosPartidoInicial: Record<string, number> = {};
+    partidosInscritos.forEach(p => {
+      votosPartidoInicial[p.id] = 0;
+    });
+
     setMesas(prev => [
       ...prev,
       {
         id: nuevoId,
         mesaNumero: prev.length + 1,
-        votosCoalicion: 0,
-        votosAlianza: 0,
-        votosUnidad: 0,
-        votosOtros: 0,
+        votosPartido: votosPartidoInicial,
         votosBlanco: 0,
         votosNulos: 0,
         totalVotos: 0,
@@ -187,16 +205,24 @@ export const TestigoMobilePage: React.FC = () => {
     setMesas(prev => prev.filter(m => m.id !== id));
   };
 
-  const actualizarVotoMesa = (mesaId: string, campo: keyof MesaActa, valor: string | number) => {
+  const actualizarVotoMesa = (mesaId: string, campo: string, valor: string | number) => {
     setMesas(prev => prev.map(m => {
       if (m.id === mesaId) {
-        const actualizado = { ...m, [campo]: valor };
+        const actualizado = { ...m };
+        if (campo.startsWith('partido_')) {
+          actualizado.votosPartido = {
+            ...actualizado.votosPartido,
+            [campo.replace('partido_', '')]: Number(valor) || 0,
+          };
+        } else if (campo === 'votosBlanco') {
+          actualizado.votosBlanco = Number(valor) || 0;
+        } else if (campo === 'votosNulos') {
+          actualizado.votosNulos = Number(valor) || 0;
+        }
         // Recalcular total
+        const votosPartidoVals = Object.values(actualizado.votosPartido).filter(v => v != null);
         actualizado.totalVotos =
-          Number(actualizado.votosCoalicion || 0) +
-          Number(actualizado.votosAlianza || 0) +
-          Number(actualizado.votosUnidad || 0) +
-          Number(actualizado.votosOtros || 0) +
+          votosPartidoVals.reduce((sum, v) => sum + Number(v), 0) +
           Number(actualizado.votosBlanco || 0) +
           Number(actualizado.votosNulos || 0);
         return actualizado;
@@ -214,10 +240,7 @@ export const TestigoMobilePage: React.FC = () => {
     for (const mesa of mesas) {
       if (!mesa.mesaNumero) return `La mesa ${mesa.id} necesita número de mesa.`;
       const total =
-        Number(mesa.votosCoalicion || 0) +
-        Number(mesa.votosAlianza || 0) +
-        Number(mesa.votosUnidad || 0) +
-        Number(mesa.votosOtros || 0) +
+        Object.values(mesa.votosPartido).reduce((sum, v) => sum + Number(v), 0) +
         Number(mesa.votosBlanco || 0) +
         Number(mesa.votosNulos || 0);
       if (total === 0) return `La mesa ${mesa.mesaNumero} necesita al menos un voto.`;
@@ -277,10 +300,10 @@ export const TestigoMobilePage: React.FC = () => {
           mesa_numero: mesa.mesaNumero,
           hora_reporte: mesa.horaReporte,
           digitalizado_por: actor?.id ?? null,
-          votos_coalicion: mesa.votosCoalicion,
-          votos_alianza: mesa.votosAlianza,
-          votos_unidad: mesa.votosUnidad,
-          votos_otros: mesa.votosOtros,
+          votos_coalicion: 0,
+          votos_alianza: 0,
+          votos_unidad: 0,
+          votos_otros: 0,
           votos_blanco: mesa.votosBlanco,
           votos_nulos: mesa.votosNulos,
           votos_no_marcados: 0,
@@ -293,6 +316,24 @@ export const TestigoMobilePage: React.FC = () => {
         });
 
         if (error) throw error;
+
+        // Guardar votos por partido
+        const votosPartido = Object.entries(mesa.votosPartido)
+          .filter(([_, v]) => Number(v) > 0)
+          .map(([partidoId, votos]) => ({
+            partidoId,
+            votos: Number(votos),
+          }));
+
+        if (votosPartido.length > 0) {
+          await supabase.from('acta_votos_partido').insert(
+            votosPartido.map(v => ({
+              acta_id: actaId,
+              partido_id: v.partidoId,
+              votos: v.votos,
+            }))
+          );
+        }
       }
 
       setMensaje({ tipo: 'exito', texto: `${mesas.length} acta(s) enviada(s) correctamente.` });
@@ -332,10 +373,10 @@ export const TestigoMobilePage: React.FC = () => {
             mesa_numero: mesa.mesaNumero,
             hora_reporte: mesa.horaReporte,
             digitalizado_por: actor?.id ?? null,
-            votos_coalicion: mesa.votosCoalicion,
-            votos_alianza: mesa.votosAlianza,
-            votos_unidad: mesa.votosUnidad,
-            votos_otros: mesa.votosOtros,
+            votos_coalicion: 0,
+            votos_alianza: 0,
+            votos_unidad: 0,
+            votos_otros: 0,
             votos_blanco: mesa.votosBlanco,
             votos_nulos: mesa.votosNulos,
             votos_no_marcados: 0,
@@ -348,6 +389,24 @@ export const TestigoMobilePage: React.FC = () => {
           });
 
           if (error) throw error;
+
+          // Guardar votos por partido
+          const votosPartido = Object.entries(mesa.votosPartido)
+            .filter(([_, v]) => Number(v) > 0)
+            .map(([partidoId, votos]) => ({
+              partidoId,
+              votos: Number(votos),
+            }));
+
+          if (votosPartido.length > 0) {
+            await supabase.from('acta_votos_partido').insert(
+              votosPartido.map(v => ({
+                acta_id: actaId,
+                partido_id: v.partidoId,
+                votos: v.votos,
+              }))
+            );
+          }
         }
 
         exitosas++;
@@ -379,14 +438,16 @@ export const TestigoMobilePage: React.FC = () => {
   // Limpiar formulario
   // ------------------------------------------------------------
   const limpiarFormulario = () => {
+    const votosPartidoInicial: Record<string, number> = {};
+    partidosInscritos.forEach(p => {
+      votosPartidoInicial[p.id] = 0;
+    });
+
     setMesas([
       {
         id: `mesa-${Date.now()}-1`,
         mesaNumero: 1,
-        votosCoalicion: 0,
-        votosAlianza: 0,
-        votosUnidad: 0,
-        votosOtros: 0,
+        votosPartido: votosPartidoInicial,
         votosBlanco: 0,
         votosNulos: 0,
         totalVotos: 0,
@@ -488,60 +549,33 @@ export const TestigoMobilePage: React.FC = () => {
                 </button>
               </div>
 
-              <div className="grid grid-cols-3 gap-2">
-                <div>
-                  <label className="block text-[10px] font-semibold text-slate-400 mb-1">
-                    Coalición
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={mesa.votosCoalicion}
-                    onChange={(e) => actualizarVotoMesa(mesa.id, 'votosCoalicion', e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-1.5 text-slate-100 text-[11px] focus:outline-none focus:border-emerald-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-semibold text-slate-400 mb-1">
-                    Alianza
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={mesa.votosAlianza}
-                    onChange={(e) => actualizarVotoMesa(mesa.id, 'votosAlianza', e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-1.5 text-slate-100 text-[11px] focus:outline-none focus:border-emerald-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-semibold text-slate-400 mb-1">
-                    Unidad
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={mesa.votosUnidad}
-                    onChange={(e) => actualizarVotoMesa(mesa.id, 'votosUnidad', e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-1.5 text-slate-100 text-[11px] focus:outline-none focus:border-emerald-500"
-                  />
+              {/* Votos por partido */}
+              <div className="mb-3">
+                <label className="block text-[10px] font-semibold text-slate-400 mb-2">
+                  Votos por Partido
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                  {partidosInscritos.map(p => (
+                    <div key={p.id}>
+                      <label className="block text-[10px] font-semibold text-slate-300 mb-1">
+                        {p.nombre} ({p.siglas})
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={mesa.votosPartido[p.id] || 0}
+                        onChange={(e) => actualizarVotoMesa(mesa.id, `partido_${p.id}`, e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-1.5 text-slate-100 text-[11px] focus:outline-none focus:border-emerald-500"
+                      />
+                    </div>
+                  ))}
                 </div>
               </div>
+
               <div className="grid grid-cols-3 gap-2 mt-2">
                 <div>
                   <label className="block text-[10px] font-semibold text-slate-400 mb-1">
-                    Otros
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={mesa.votosOtros}
-                    onChange={(e) => actualizarVotoMesa(mesa.id, 'votosOtros', e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-1.5 text-slate-100 text-[11px] focus:outline-none focus:border-emerald-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-semibold text-slate-400 mb-1">
-                    Blanco
+                    Votos en Blanco
                   </label>
                   <input
                     type="number"
@@ -553,7 +587,7 @@ export const TestigoMobilePage: React.FC = () => {
                 </div>
                 <div>
                   <label className="block text-[10px] font-semibold text-slate-400 mb-1">
-                    Nulos
+                    Votos Nulos
                   </label>
                   <input
                     type="number"
@@ -563,9 +597,18 @@ export const TestigoMobilePage: React.FC = () => {
                     className="w-full bg-slate-950 border border-slate-700 rounded-lg p-1.5 text-slate-100 text-[11px] focus:outline-none focus:border-emerald-500"
                   />
                 </div>
-              </div>
-              <div className="mt-2 flex items-center gap-2">
-                <span className="text-[10px] text-slate-500">Total: <span className="font-bold text-white">{mesa.totalVotos}</span></span>
+                <div>
+                  <label className="block text-[10px] font-semibold text-slate-400 mb-1">
+                    Total
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={mesa.totalVotos}
+                    readOnly
+                    className="w-full bg-slate-800 border border-slate-700 rounded-lg p-1.5 text-slate-400 text-[11px]"
+                  />
+                </div>
               </div>
 
               {/* Foto por mesa */}

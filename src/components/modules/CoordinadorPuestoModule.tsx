@@ -5,10 +5,10 @@ import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
 import { MapPin, Target, FileText, Users, Clock, CheckCircle, AlertCircle, Search, ChevronRight } from 'lucide-react';
-import { PuestoVotacion } from '../../types/electoral';
+import { PuestoVotacion, ActaVotoPartido } from '../../types/electoral';
 
 export const CoordinadorPuestoModule: React.FC = () => {
-  const { puestos, testigos, actas, actors } = useElectoralStore();
+  const { puestos, testigos, actas, actors, partidos, getActaVotosPartido } = useElectoralStore();
   const { currentActor } = useSecurityStore();
 
   const actor = currentActor();
@@ -20,14 +20,30 @@ export const CoordinadorPuestoModule: React.FC = () => {
     ? puestos
     : puestos.filter(p => p.departamentoId === actor?.scopeId || p.municipioId === actor?.scopeId);
 
-  const [puestoSeleccionado, setPuestoSeleccionado] = useState<PuestoVotacion | null>(null);
-  const [busqueda, setBusqueda] = useState('');
-
   // Filtrar puestos por búsqueda
   const puestosMostrados = puestosFiltrados.filter(p =>
     p.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
     p.comunaBarrio.toLowerCase().includes(busqueda.toLowerCase())
   );
+
+  const [puestoSeleccionado, setPuestoSeleccionado] = useState<PuestoVotacion | null>(null);
+  const [busqueda, setBusqueda] = useState('');
+  const [votosPorActa, setVotosPorActa] = useState<Record<string, any[]>>({});
+
+  // Cargar votos por partido cuando se selecciona un puesto
+  useEffect(() => {
+    if (!puestoSeleccionado) return;
+    const cargarVotos = async () => {
+      const actasPuesto = actas.filter(a => a.puestoId === puestoSeleccionado.id);
+      const votosMap: Record<string, any[]> = {};
+      for (const a of actasPuesto) {
+        const votos = await getActaVotosPartido(a.id);
+        votosMap[a.id] = votos;
+      }
+      setVotosPorActa(votosMap);
+    };
+    cargarVotos();
+  }, [puestoSeleccionado, actas, getActaVotosPartido]);
 
   // Obtener datos de una mesa específica
   const getDatosMesa = (puestoId: string, mesaNumero: number) => {
@@ -199,8 +215,10 @@ export const CoordinadorPuestoModule: React.FC = () => {
                 <thead className="bg-slate-900/50 text-slate-400 uppercase font-mono text-[10px] border-b border-slate-800">
                   <tr>
                     <th className="p-2 w-16 text-center">Mesa</th>
-                    <th className="p-2">Testigos</th>
-                    <th className="p-2 text-center">Acta E-14</th>
+                    <th className="p-2">Votos por Partido</th>
+                    <th className="p-2">Blancos</th>
+                    <th className="p-2">Nulos</th>
+                    <th className="p-2 text-center">Total</th>
                     <th className="p-2 text-center">Estado</th>
                     <th className="p-2 text-center">Acción</th>
                   </tr>
@@ -209,25 +227,46 @@ export const CoordinadorPuestoModule: React.FC = () => {
                   {Array.from({ length: puestoSeleccionado.mesasHabilitadas }, (_, i) => i + 1).map(mesaNumero => {
                     const { acta, testigos: testigosMesa } = getDatosMesa(puestoSeleccionado.id, mesaNumero);
                     const tieneActa = !!acta;
-                    const tieneTestigos = testigosMesa.length > 0;
+                    const votosMesa = tieneActa ? votosPorActa[acta.id] ?? [] : [];
+                    const totalVotosMesa = votosMesa.reduce((sum, v) => sum + Number(v.votos), 0) +
+                      Number(mesaNumVotosBlanco(mesaNumero, acta)) +
+                      Number(mesaNumVotosNulos(mesaNumero, acta));
+
                     return (
                       <tr key={mesaNumero} className="hover:bg-slate-800/30 transition-colors">
                         <td className="p-2 text-center">
                           <span className="font-mono font-bold text-white">#{mesaNumero}</span>
                         </td>
                         <td className="p-2">
-                          <span className={`text-[10px] px-2 py-0.5 rounded ${tieneTestigos ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-800 text-slate-500'}`}>
-                            {tieneTestigos ? testigosMesa.length : '0'}
+                          {votosMesa.length > 0 ? (
+                            <div className="space-y-1">
+                              {votosMesa.map(v => (
+                                <div key={v.partidoId} className="flex items-center gap-1">
+                                  <span className="text-[9px] text-slate-400 truncate max-w-[60px]">
+                                    {v.partidoSiglas || v.partidoNombre?.slice(0, 8)}
+                                  </span>
+                                  <span className="text-[10px] font-mono font-bold text-white">{v.votos}</span>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-[10px] text-slate-500">Sin votos</span>
+                          )}
+                        </td>
+                        <td className="p-2 text-center">
+                          <span className="font-mono text-slate-300">
+                            {tieneActa ? acta.votosBlanco : 0}
                           </span>
                         </td>
                         <td className="p-2 text-center">
-                          {tieneActa ? (
-                            <span className="text-[10px] font-bold text-emerald-400">
-                              Acta registrada
-                            </span>
-                          ) : (
-                            <span className="text-[10px] text-slate-500">Sin acta</span>
-                          )}
+                          <span className="font-mono text-slate-300">
+                            {tieneActa ? acta.votosNulos : 0}
+                          </span>
+                        </td>
+                        <td className="p-2 text-center">
+                          <span className="font-mono font-bold text-white">
+                            {totalVotosMesa > 0 ? totalVotosMesa : '-'}
+                          </span>
                         </td>
                         <td className="p-2 text-center">
                           <span className={`text-[10px] px-2 py-0.5 rounded font-bold ${
@@ -258,7 +297,6 @@ export const CoordinadorPuestoModule: React.FC = () => {
                               variant="primary"
                               size="sm"
                               onClick={() => {
-                                // Aquí se podría abrir el modal de acta para esta mesa
                                 console.log('Crear acta para mesa', mesaNumero);
                               }}
                               icon={<FileText className="w-3 h-3" />}
@@ -279,3 +317,11 @@ export const CoordinadorPuestoModule: React.FC = () => {
     </div>
   );
 };
+
+function mesaNumVotosBlanco(mesaNumero: number, acta: any): number {
+  return acta?.votosBlanco ?? 0;
+}
+
+function mesaNumVotosNulos(mesaNumero: number, acta: any): number {
+  return acta?.votosNulos ?? 0;
+}

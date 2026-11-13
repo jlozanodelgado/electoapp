@@ -178,6 +178,15 @@ export interface ActaE14 {
   leaderId?: string; // quién digitalizó
 }
 
+export interface ActaVotoPartido {
+  id: string;
+  actaId: string;
+  partidoId: string;
+  partidoNombre: string;
+  partidoSiglas: string;
+  votos: number;
+}
+
 export interface AlertaFraude {
   id: string;
   puestoId: string;

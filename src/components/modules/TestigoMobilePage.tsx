@@ -91,7 +91,24 @@ function removerDeCola(id: string): void {
 
 export const TestigoMobilePage: React.FC = () => {
   const { currentActor } = useSecurityStore();
-  const { puestos, addActaE14, testigos, actorRole } = useElectoralStore();
+  const {
+    puestos,
+    addActaE14,
+    testigos,
+    actorRole,
+  } = useElectoralStore();
+
+  const actor = currentActor();
+  const isTestigo = actorRole === 'witness';
+
+  // Buscar el testigo asignado a este actor (por nombre coincidente)
+  const testigoAsignado = testigos.find(
+    (t) => t.nombre === actor?.nombre || t.leaderId === actor?.id,
+  );
+
+  const puestoId = testigoAsignado?.puestoId || '';
+  const puestoNombre = testigoAsignado?.puestoNombre || 'Sin puesto asignado';
+  const mesaActual = testigoAsignado?.mesaNumero || '';
 
   const [online, setOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
   const [cargando, setCargando] = useState(false);
@@ -102,9 +119,8 @@ export const TestigoMobilePage: React.FC = () => {
   const [colaPendiente, setColaPendiente] = useState<ActaPendiente[]>([]);
   const [mensaje, setMensaje] = useState<{ tipo: 'exito' | 'error'; texto: string } | null>(null);
 
-  // Formulario
-  const [puestoId, setPuestoId] = useState('');
-  const [mesaNumero, setMesaNumero] = useState('');
+  // Formulario - solo mesa es editable, puesto viene del testigo asignado
+  const [mesaNumero, setMesaNumero] = useState(mesaActual?.toString() || '');
   const [votosCoalicion, setVotosCoalicion] = useState('0');
   const [votosAlianza, setVotosAlianza] = useState('0');
   const [votosUnidad, setVotosUnidad] = useState('0');
@@ -138,7 +154,7 @@ export const TestigoMobilePage: React.FC = () => {
   }, []);
 
   // ------------------------------------------------------------
-  // Cargar puestos y cola pendiente al iniciar
+  // Cargar cola pendiente al iniciar
   // ------------------------------------------------------------
   useEffect(() => {
     setColaPendiente(obtenerCola());
@@ -151,13 +167,11 @@ export const TestigoMobilePage: React.FC = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validar tipo
     if (!file.type.startsWith('image/')) {
       setMensaje({ tipo: 'error', texto: 'Selecciona una imagen válida.' });
       return;
     }
 
-    // Validar tamaño (máximo 5MB antes de comprimir)
     if (file.size > 5 * 1024 * 1024) {
       setMensaje({ tipo: 'error', texto: 'La imagen es muy grande (máx. 5 MB).' });
       return;
@@ -189,7 +203,7 @@ export const TestigoMobilePage: React.FC = () => {
   // Validación del formulario
   // ------------------------------------------------------------
   const validarFormulario = (): string | null => {
-    if (!puestoId) return 'Selecciona un puesto de votación.';
+    if (!puestoId) return 'No tienes un puesto asignado. Contacta al administrador.';
     if (!mesaNumero) return 'Ingresa el número de mesa.';
     const total =
       Number(votosCoalicion || 0) +
@@ -267,10 +281,8 @@ export const TestigoMobilePage: React.FC = () => {
     try {
       let fotoUrl: string | undefined;
 
-      // Si hay foto comprimida, la intentamos subir como archivo a Supabase Storage
-      // o guardamos la data URL directamente si no hay bucket configurado.
       if (fotoBase64) {
-        fotoUrl = fotoBase64; // Data URL comprimida (base64)
+        fotoUrl = fotoBase64;
       }
 
       const actaConFoto = {
@@ -292,8 +304,8 @@ export const TestigoMobilePage: React.FC = () => {
         estado_revision: actaConFoto.estado_revision,
         foto_acta_url: actaConFoto.foto_acta_url,
         hora_reporte: actaConFoto.hora_reporte,
-        digitalizado_por: currentActor()?.id || null,
-        leader_id: currentActor()?.id || null,
+        digitalizado_por: actor?.id || null,
+        leader_id: actor?.id || null,
         created_at: ahora,
         updated_at: ahora,
       });
@@ -304,7 +316,6 @@ export const TestigoMobilePage: React.FC = () => {
       limpiarFormulario();
     } catch (err: any) {
       console.error('Error subiendo acta:', err);
-      // Si falla Supabase, guardamos localmente como respaldo
       guardarLocalmente();
       setMensaje({
         tipo: 'error',
@@ -344,8 +355,8 @@ export const TestigoMobilePage: React.FC = () => {
           estado_revision: pendiente.datos.estado_revision,
           foto_acta_url: pendiente.fotoBase64 || null,
           hora_reporte: pendiente.datos.hora_reporte,
-          digitalizado_por: currentActor()?.id || null,
-          leader_id: currentActor()?.id || null,
+          digitalizado_por: actor?.id || null,
+          leader_id: actor?.id || null,
           created_at: pendiente.datos.hora_reporte,
           updated_at: new Date().toISOString(),
         });
@@ -374,14 +385,13 @@ export const TestigoMobilePage: React.FC = () => {
         texto: `${fallidas.length} acta(s) no se pudieron subir. Se reintentará más tarde.`,
       });
     }
-  }, [currentActor()?.id]);
+  }, [actor?.id]);
 
   // ------------------------------------------------------------
-  // Limpiar formulario
+  // Limpiar formulario (mantiene el puesto asignado)
   // ------------------------------------------------------------
   const limpiarFormulario = () => {
-    setPuestoId('');
-    setMesaNumero('');
+    setMesaNumero(mesaActual?.toString() || '');
     setVotosCoalicion('0');
     setVotosAlianza('0');
     setVotosUnidad('0');
@@ -395,8 +405,6 @@ export const TestigoMobilePage: React.FC = () => {
   // ------------------------------------------------------------
   // Render
   // ------------------------------------------------------------
-  const puestosLista = puestos || [];
-
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 p-4 md:p-6 max-w-md mx-auto">
       {/* Header */}
@@ -439,6 +447,27 @@ export const TestigoMobilePage: React.FC = () => {
         </div>
       )}
 
+      {/* Información del puesto asignado (solo lectura) */}
+      <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-3 mb-4">
+        <div className="flex items-center gap-2 mb-2">
+          <div className="w-6 h-6 rounded-full bg-blue-500/20 border border-blue-500/40 flex items-center justify-center text-blue-400 text-[10px]">
+            <X className="w-3 h-3" />
+          </div>
+          <h3 className="text-sm font-bold text-white">Puesto Asignado</h3>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-slate-300">{puestoNombre}</span>
+          <span className="text-xs text-slate-500 bg-slate-800 px-2 py-1 rounded">
+            ID: {puestoId.slice(0, 8)}...
+          </span>
+        </div>
+        {!puestoId && (
+          <p className="text-xs text-rose-400 mt-2">
+            No tienes un puesto asignado. Contacta al administrador para asignarte uno.
+          </p>
+        )}
+      </div>
+
       {/* Formulario de acta E-14 */}
       <form onSubmit={guardarActa} className="space-y-4 bg-slate-900/60 border border-slate-800 rounded-xl p-4">
         <h2 className="text-sm font-semibold text-slate-300 mb-3 uppercase tracking-wider">
@@ -447,37 +476,17 @@ export const TestigoMobilePage: React.FC = () => {
 
         <div>
           <label className="block text-xs font-semibold text-slate-400 mb-1">
-            Puesto de Votación *
+            Mesa de Votación *
           </label>
-          <select
-            value={puestoId}
-            onChange={(e) => setPuestoId(e.target.value)}
+          <input
+            type="number"
+            min="1"
+            max="150"
+            value={mesaNumero}
+            onChange={(e) => setMesaNumero(e.target.value)}
             className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:outline-none focus:border-emerald-500"
-          >
-            <option value="">Seleccionar puesto</option>
-            {puestosLista.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.nombre} ({p.comunaBarrio})
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs font-semibold text-slate-400 mb-1">
-              Mesa *
-            </label>
-            <input
-              type="number"
-              min="1"
-              max="150"
-              value={mesaNumero}
-              onChange={(e) => setMesaNumero(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-100 focus:outline-none focus:border-emerald-500"
-              placeholder="Ej. 5"
-            />
-          </div>
+            placeholder="Ej. 5"
+          />
         </div>
 
         <div className="grid grid-cols-3 gap-2">
@@ -619,7 +628,12 @@ export const TestigoMobilePage: React.FC = () => {
             type="submit"
             variant="primary"
             size="sm"
-            disabled={subiendo || !online || cargando}
+            disabled={
+              subiendo ||
+              !online ||
+              cargando ||
+              !puestoId
+            }
             icon={<Upload className="w-4 h-4" />}
           >
             {subiendo ? 'Enviando…' : !online ? 'Sin internet' : 'Enviar Acta E-14'}
@@ -650,7 +664,7 @@ export const TestigoMobilePage: React.FC = () => {
       )}
 
       <div className="mt-6 text-[10px] text-slate-500 text-center">
-        Rol: {actorRole} · Actor: {currentActor()?.nombre || 'Sin asignar'}
+        Rol: {actorRole} · Actor: {actor?.nombre || 'Sin asignar'}
       </div>
     </div>
   );

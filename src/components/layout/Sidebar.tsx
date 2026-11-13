@@ -151,7 +151,7 @@ export const Sidebar: React.FC = () => {
 
         {/* Cabecera personalizada para Supervisor de Candidato */}
         {isCandidateSupervisor && partido && candidato && (
-          <div className="mb-4 p-3 rounded-xl border border-slate-800/50 relative overflow-hidden">
+          <div className="mb-3 p-3 rounded-xl border border-slate-800/50 relative overflow-hidden">
             {/* Fondo con color del partido */}
             <div className="absolute inset-0 bg-[color:{partido.color}] opacity-20 rounded-xl" />
             <div className="relative z-10 flex flex-col p-3">
@@ -178,6 +178,104 @@ export const Sidebar: React.FC = () => {
               </div>
             </div>
           </div>
+        )}
+
+        {/* Cabecera personalizada para Líder */}
+        {isLider && actor && candidato && partido && (
+          <div className="mb-3 p-3 rounded-xl border border-slate-800/50 relative overflow-hidden">
+            {/* Fondo con color del partido */}
+            <div className="absolute inset-0 bg-[color:{partido.color}] opacity-15 rounded-xl" />
+            <div className="relative z-10 flex flex-col p-3">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-9 h-9 rounded-full bg-white/20 border border-white/30 overflow-hidden">
+                  {candidato.fotoUrl ? (
+                    <img src={candidato.fotoUrl} alt={candidato.nombre} className="w-full h-full object-cover" />
+                  ) : (
+                    <Image className="w-5 h-5 text-white/80" />
+                  )}
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-white" style={{ color: partido.color }}>
+                    {partido.nombre}
+                  </p>
+                  <p className="text-[10px] font-semibold text-white/90 uppercase tracking-wider">
+                    {partido.siglas}
+                  </p>
+                </div>
+              </div>
+              <div className="pt-2 border-t border-white/20">
+                <p className="text-xs font-medium text-white">Líder del Candidato</p>
+                <p className="text-sm font-bold text-white">{actor.nombre}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Cabecera personalizada para Testigo */}
+        {isTestigo && actor && (
+          <>
+            {/* Buscar el líder del testigo */}
+            {actor.leaderId && (
+              <>
+                {(() => {
+                  const liderActor = actors.find(a => a.id === actor.leaderId);
+                  const liderCandidato = candidatos.find(c => c.id === liderActor?.candidatoId);
+                  const liderPartido = partidos.find(p => p.id === liderCandidato?.partidoId);
+                  
+                  if (liderActor && liderCandidato && liderPartido) {
+                    return (
+                      <div className="mb-3 p-3 rounded-xl border border-slate-800/50 relative overflow-hidden">
+                        {/* Fondo con color del partido */}
+                        <div className="absolute inset-0 bg-[color:{liderPartido.color}] opacity-15 rounded-xl" />
+                        <div className="relative z-10 flex flex-col p-3">
+                          <div className="flex items-center gap-3 mb-2">
+                            <div className="w-9 h-9 rounded-full bg-white/20 border border-white/30 overflow-hidden">
+                              {liderCandidato.fotoUrl ? (
+                                <img src={liderCandidato.fotoUrl} alt={liderCandidato.nombre} className="w-full h-full object-cover" />
+                              ) : (
+                                <Image className="w-5 h-5 text-white/80" />
+                              )}
+                            </div>
+                            <div>
+                              <p className="text-sm font-bold text-white" style={{ color: liderPartido.color }}>
+                                {liderPartido.nombre}
+                              </p>
+                              <p className="text-[10px] font-semibold text-white/90 uppercase tracking-wider">
+                                {liderPartido.siglas}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="pt-2 border-t border-white/20">
+                            <p className="text-xs font-medium text-white">Candidato</p>
+                            <p className="text-sm font-bold text-white">{liderCandidato.nombre}</p>
+                          </div>
+                          <div className="pt-2 border-t border-white/20 mt-2">
+                            <p className="text-xs font-medium text-white">Líder</p>
+                            <p className="text-sm font-bold text-white">{liderActor.nombre}</p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
+              </>
+            )}
+            {/* Si el testigo no tiene líder asignado */}
+            {actor && !actor.leaderId && (
+              <div className="mb-3 p-3 rounded-xl border border-slate-800/50 bg-slate-900/50">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400 text-[10px]">
+                    <MapPin className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-white">Sin partido asignado</p>
+                    <p className="text-[10px] text-slate-400">Contacta a un líder para ser asignado</p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
         )}
 
         {/* Modules navigation */}

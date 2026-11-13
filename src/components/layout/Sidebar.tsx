@@ -94,6 +94,12 @@ export const Sidebar: React.FC = () => {
       desc: 'Ver mesas y actas de mi puesto',
       icon: <MapPin className="w-5 h-5" />,
     },
+    {
+      id: 'admin_candidato',
+      label: 'Administración Candidato',
+      desc: 'Gestionar líderes, testigos y votantes',
+      icon: <Shield className="w-5 h-5" />,
+    },
   ];
 
   // Filtro de módulos por rol
@@ -112,6 +118,15 @@ export const Sidebar: React.FC = () => {
     navItems = allNavItems.filter(i => i.id === 'mapa' || i.id === 'dia_d' || i.id === 'testigo_mobile');
   } else if (isLider) {
     navItems = allNavItems.filter(i => i.id !== 'ejecutivo');
+  } else if (isCandidateSupervisor) {
+    navItems = allNavItems.filter(i => 
+      i.id === 'mapa' || 
+      i.id === 'candidatos' || 
+      i.id === 'preparacion' || 
+      i.id === 'testigo_mobile' || 
+      i.id === 'coordinador_puesto' || 
+      i.id === 'admin_candidato'
+    );
   }
 
   // Si el módulo activo ya no existe para este rol, resetear a mapa

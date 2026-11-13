@@ -20,7 +20,7 @@ import { isPointInPolygon } from '../utils/geoUtils';
 import { SupabaseService } from '../services/supabaseService';
 import { supabaseMock } from '../services/supabaseMock';
 
-export type ModuloActivo = 'mapa' | 'campana' | 'candidatos' | 'preparacion' | 'dia_d' | 'ejecutivo' | 'territorio' | 'admin' | 'testigo_mobile' | 'coordinador_puesto';
+export type ModuloActivo = 'mapa' | 'campana' | 'candidatos' | 'preparacion' | 'dia_d' | 'ejecutivo' | 'territorio' | 'admin' | 'testigo_mobile' | 'coordinador_puesto' | 'admin_candidato';
 
 interface ElectoralState {
   moduloActivo: ModuloActivo;

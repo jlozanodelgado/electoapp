@@ -20,8 +20,9 @@ import {
   Upload,
 } from 'lucide-react';
 import { ImportarMasivoExcel } from '../modules/ImportarMasivoExcel';
+import { ExportarExcelActor } from '../modules/ExportarExcelActor';
 
-type AdminTab = 'partidos' | 'candidatos' | 'actores' | 'usuarios' | 'importar';
+type AdminTab = 'partidos' | 'candidatos' | 'actores' | 'usuarios' | 'importar' | 'exportar';
 
 const ROLE_LABELS: Record<string, string> = {
   totalSupervisor: 'Supervisor Total',
@@ -66,6 +67,7 @@ export const AdminPanelModule: React.FC = () => {
   const openEditTestigo = useElectoralStore(s => s.openEditTestigo);
   const openEditVoter = useElectoralStore(s => s.openEditVoter);
   const migrateMockToSupabase = useElectoralStore(s => s.migrateMockToSupabase);
+  const actorId = useElectoralStore(s => s.actorId);
   const deleteActor = useSecurityStore(s => s.deleteActor);
 
   const [tab, setTab] = useState<AdminTab>('partidos');
@@ -74,8 +76,11 @@ export const AdminPanelModule: React.FC = () => {
   const [migracionCargando, setMigracionCargando] = useState(false);
   const [resultadoMigracion, setResultadoMigracion] = useState<any>(null);
 
-  // ---- Control de acceso: solo Supervisor Total ----
-  if (actorRole !== 'totalSupervisor') {
+  // ---- Control de acceso: Supervisor Total y Supervisor de Candidato ----
+  const esSupervisorTotal = actorRole === 'totalSupervisor';
+  const esSupervisorCandidato = actorRole === 'candidateSupervisor';
+
+  if (!esSupervisorTotal && !esSupervisorCandidato) {
     return (
       <div className="h-full flex items-center justify-center p-8 bg-slate-950">
         <Card className="max-w-md w-full text-center">
@@ -84,13 +89,22 @@ export const AdminPanelModule: React.FC = () => {
           </div>
           <h2 className="text-lg font-bold text-white mb-1">Acceso restringido</h2>
           <p className="text-sm text-slate-400">
-            Solo el <span className="font-semibold text-rose-300">Supervisor Total</span> puede
+            Solo el <span className="font-semibold text-rose-300">Supervisor Total</span> o
+            <span className="font-semibold text-blue-300">Supervisor de Candidato</span> puede
             acceder al Panel de Administración.
           </p>
         </Card>
       </div>
     );
   }
+
+  // El supervisor de candidato solo puede ver la pestaña de exportación
+  const soloExportacion = esSupervisorCandidato;
+  const candidatoId = esSupervisorCandidato
+    ? (useElectoralStore(s => s.actors.find(a => a.id === actorId)?.candidatoId) ?? null)
+    : null;
+
+  const actorActivo = useElectoralStore(s => s.actors.find(a => a.id === actorId));
 
   const q = busqueda.trim().toLowerCase();
   const filtrar = <T extends { nombre?: string; nombreCompleto?: string; siglas?: string; cargo?: string; rol?: string; role?: string }>(
@@ -104,13 +118,18 @@ export const AdminPanelModule: React.FC = () => {
         )
       : list;
 
-  const tabs: Array<{ id: AdminTab; label: string; icon: React.ReactNode; count: number }> = [
-    { id: 'partidos', label: 'Partidos', icon: <Flag className="w-4 h-4" />, count: partidos.length },
-    { id: 'candidatos', label: 'Candidatos', icon: <Building className="w-4 h-4" />, count: candidatos.length },
-    { id: 'actores', label: 'Actores', icon: <Users className="w-4 h-4" />, count: actors.length },
-    { id: 'usuarios', label: 'Usuarios Auth', icon: <UserPlus className="w-4 h-4" />, count: actors.length },
-    { id: 'importar', label: 'Importar Excel', icon: <Download className="w-4 h-4" />, count: 0 },
-  ];
+  const tabs: Array<{ id: AdminTab; label: string; icon: React.ReactNode; count: number }> = soloExportacion
+    ? [
+        { id: 'exportar', label: 'Exportar Excel', icon: <Download className="w-4 h-4" />, count: 0 },
+      ]
+    : [
+        { id: 'partidos', label: 'Partidos', icon: <Flag className="w-4 h-4" />, count: partidos.length },
+        { id: 'candidatos', label: 'Candidatos', icon: <Building className="w-4 h-4" />, count: candidatos.length },
+        { id: 'actores', label: 'Actores', icon: <Users className="w-4 h-4" />, count: actors.length },
+        { id: 'usuarios', label: 'Usuarios Auth', icon: <UserPlus className="w-4 h-4" />, count: actors.length },
+        { id: 'importar', label: 'Importar Excel', icon: <Upload className="w-4 h-4" />, count: 0 },
+        { id: 'exportar', label: 'Exportar Excel', icon: <Download className="w-4 h-4" />, count: 0 },
+      ];
 
   return (
     <div className="h-full overflow-y-auto p-4 md:p-6 space-y-5 bg-slate-950 select-none">
@@ -434,6 +453,12 @@ export const AdminPanelModule: React.FC = () => {
       {tab === 'importar' && (
         <Card title="Importación Masiva por Excel" subtitle="Carga departamentos, municipios y puestos de votación desde un archivo Excel">
           <ImportarMasivoExcel />
+        </Card>
+      )}
+
+      {tab === 'exportar' && (
+        <Card title="Exportar a Excel" subtitle="Descarga los datos de actores, testigos y votantes">
+          <ExportarExcelActor canExport={!soloExportacion || (esSupervisorCandidato && !!candidatoId)} candidatoId={candidatoId} />
         </Card>
       )}
 

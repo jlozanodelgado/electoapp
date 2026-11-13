@@ -27,12 +27,10 @@ export const CreateUserModal: React.FC<Props> = ({ isOpen, onClose }) => {
         { value: 'candidateSupervisor', label: 'Supervisor de Candidato', desc: 'Gestiona un candidato y su territorio' },
         { value: 'leader', label: 'Líder Político', desc: 'Coordina testigos y votantes en un municipio/zona' },
         { value: 'witness', label: 'Testigo Electoral', desc: 'Monitorea mesas y digitaliza actas E-14' },
-        { value: 'voter', label: 'Votante CRM', desc: 'Votante simpatizante registrado' },
       ]
     : [
         { value: 'leader', label: 'Líder Político', desc: 'Coordina testigos y votantes en un municipio/zona' },
         { value: 'witness', label: 'Testigo Electoral', desc: 'Monitorea mesas y digitaliza actas E-14' },
-        { value: 'voter', label: 'Votante CRM', desc: 'Votante simpatizante registrado' },
       ];
 
   const [nombre, setNombre] = useState('');
@@ -83,15 +81,18 @@ export const CreateUserModal: React.FC<Props> = ({ isOpen, onClose }) => {
   // Reglas de visibilidad y obligatoriedad por rol
   const mostrarPartido = rol === 'candidateSupervisor' || rol === 'leader';
   const mostrarCandidato = rol === 'candidateSupervisor' || rol === 'leader';
-  const mostrarDepartamento = rol === 'leader' || (candidatoSeleccionado?.cargo && candidatoSeleccionado.cargo !== 'presidente');
-  const mostrarMunicipio = rol === 'leader' || rol === 'witness' || rol === 'voter' || (candidatoSeleccionado?.cargo && !['gobernacion', 'asamblea_departamental'].includes(candidatoSeleccionado.cargo));
+  // Departamento se muestra para leader, witness y candidateSupervisor (si no es nacional)
+  const mostrarDepartamento = rol === 'leader' || rol === 'witness' || (rol === 'candidateSupervisor' && municipioId);
+  // Municipio solo se muestra si ya se seleccionó un departamento
+  const mostrarMunicipio = (rol === 'leader' || rol === 'witness' || rol === 'candidateSupervisor') && departamentoId;
   const mostrarSupervisor = rol === 'leader';
-  const mostrarLider = rol === 'witness' || rol === 'voter';
+  const mostrarLider = rol === 'witness';
 
   // Determinar scopeLevel y scopeId para el registro
   const computeScope = (): { scopeLevel: ScopeLevel; scopeId: string } => {
-    if (rol === 'leader' || rol === 'witness' || rol === 'voter') {
-      return { scopeLevel: 'municipality', scopeId: municipioId || '' };
+    if (rol === 'leader' || rol === 'witness') {
+      // Líderes y testigos siempre van amarrados a un municipio específico
+      return { scopeLevel: 'municipality', scopeId: municipioId || departamentoId || '' };
     }
     if (rol === 'candidateSupervisor') {
       if (municipioId) return { scopeLevel: 'municipality', scopeId: municipioId };
@@ -149,7 +150,7 @@ export const CreateUserModal: React.FC<Props> = ({ isOpen, onClose }) => {
         scopeId,
         candidatoId: finalCandidatoId,
         supervisorId: finalSupervisorId,
-        leaderId: rol === 'witness' || rol === 'voter' ? leaderId : undefined,
+        leaderId: rol === 'witness' ? leaderId : undefined,
       });
 
       setStatusMsg({

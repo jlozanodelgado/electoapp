@@ -155,6 +155,16 @@ export const Sidebar: React.FC = () => {
             {/* Fondo con color del partido */}
             <div className="absolute inset-0 bg-[color:{partido.color}] opacity-20 rounded-xl" />
             <div className="relative z-10 flex flex-col p-3">
+              {/* Logo del partido */}
+              <div className="mb-2 flex items-center justify-center">
+                {partido.logoUrl ? (
+                  <img src={partido.logoUrl} alt={partido.nombre} className="w-8 h-8 rounded-lg object-cover bg-white/20" />
+                ) : (
+                  <div className="w-8 h-8 rounded-lg bg-white/20 border border-white/30 flex items-center justify-center text-white/80">
+                    <Flag className="w-4 h-4" />
+                  </div>
+                )}
+              </div>
               <div className="flex items-center gap-3 mb-2">
                 <div className="w-10 h-10 rounded-full bg-white/20 border border-white/30 overflow-hidden">
                   {candidato.fotoUrl ? (
@@ -174,7 +184,10 @@ export const Sidebar: React.FC = () => {
               </div>
               <div className="pt-2 border-t border-white/20">
                 <p className="text-xs font-medium text-white">Candidato</p>
-                <p className="text-sm font-bold text-white">{candidato.nombre}</p>
+                <p className="text-sm font-bold text-white">{candidato.nombre} {candidato.apellido || ''}</p>
+                <p className="text-xs text-slate-400 mt-1">
+                  Tarjetón: {candidato.numeroTarjeton || 'Sin asignar'}
+                </p>
               </div>
             </div>
           </div>
@@ -186,6 +199,16 @@ export const Sidebar: React.FC = () => {
             {/* Fondo con color del partido */}
             <div className="absolute inset-0 bg-[color:{partido.color}] opacity-15 rounded-xl" />
             <div className="relative z-10 flex flex-col p-3">
+              {/* Logo del partido */}
+              <div className="mb-2 flex items-center justify-center">
+                {partido.logoUrl ? (
+                  <img src={partido.logoUrl} alt={partido.nombre} className="w-8 h-8 rounded-lg object-cover bg-white/20" />
+                ) : (
+                  <div className="w-8 h-8 rounded-lg bg-white/20 border border-white/30 flex items-center justify-center text-white/80">
+                    <Flag className="w-4 h-4" />
+                  </div>
+                )}
+              </div>
               <div className="flex items-center gap-3 mb-2">
                 <div className="w-9 h-9 rounded-full bg-white/20 border border-white/30 overflow-hidden">
                   {candidato.fotoUrl ? (
@@ -204,8 +227,11 @@ export const Sidebar: React.FC = () => {
                 </div>
               </div>
               <div className="pt-2 border-t border-white/20">
-                <p className="text-xs font-medium text-white">Líder del Candidato</p>
-                <p className="text-sm font-bold text-white">{actor.nombre}</p>
+                <p className="text-xs font-medium text-white">Candidato</p>
+                <p className="text-sm font-bold text-white">{candidato.nombre} {candidato.apellido || ''}</p>
+                <p className="text-xs text-slate-400 mt-1">
+                  Tarjetón: {candidato.numeroTarjeton || 'Sin asignar'}
+                </p>
               </div>
             </div>
           </div>
@@ -225,6 +251,16 @@ export const Sidebar: React.FC = () => {
                     {/* Fondo con color del partido */}
                     <div className="absolute inset-0 bg-[color:{liderPartido.color}] opacity-15 rounded-xl" />
                     <div className="relative z-10 flex flex-col p-3">
+                      {/* Logo del partido */}
+                      <div className="mb-2 flex items-center justify-center">
+                        {liderPartido.logoUrl ? (
+                          <img src={liderPartido.logoUrl} alt={liderPartido.nombre} className="w-8 h-8 rounded-lg object-cover bg-white/20" />
+                        ) : (
+                          <div className="w-8 h-8 rounded-lg bg-white/20 border border-white/30 flex items-center justify-center text-white/80">
+                            <Flag className="w-4 h-4" />
+                          </div>
+                        )}
+                      </div>
                       <div className="flex items-center gap-3 mb-2">
                         <div className="w-9 h-9 rounded-full bg-white/20 border border-white/30 overflow-hidden">
                           {liderCandidato.fotoUrl ? (
@@ -244,11 +280,10 @@ export const Sidebar: React.FC = () => {
                       </div>
                       <div className="pt-2 border-t border-white/20">
                         <p className="text-xs font-medium text-white">Candidato</p>
-                        <p className="text-sm font-bold text-white">{liderCandidato.nombre}</p>
-                      </div>
-                      <div className="pt-2 border-t border-white/20 mt-2">
-                        <p className="text-xs font-medium text-white">Líder</p>
-                        <p className="text-sm font-bold text-white">{liderActor.nombre}</p>
+                        <p className="text-sm font-bold text-white">{liderCandidato.nombre} {liderCandidato.apellido || ''}</p>
+                        <p className="text-xs text-slate-400 mt-1">
+                          Tarjetón: {liderCandidato.numeroTarjeton || 'Sin asignar'}
+                        </p>
                       </div>
                     </div>
                   </div>

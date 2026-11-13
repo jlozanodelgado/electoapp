@@ -17,6 +17,7 @@ import {
   UserPlus,
   Pencil,
   Download,
+  Upload,
 } from 'lucide-react';
 import { ImportarMasivoExcel } from '../modules/ImportarMasivoExcel';
 
@@ -64,11 +65,14 @@ export const AdminPanelModule: React.FC = () => {
   const setEditingActor = useElectoralStore(s => s.setEditingActor);
   const openEditTestigo = useElectoralStore(s => s.openEditTestigo);
   const openEditVoter = useElectoralStore(s => s.openEditVoter);
+  const migrateMockToSupabase = useElectoralStore(s => s.migrateMockToSupabase);
   const deleteActor = useSecurityStore(s => s.deleteActor);
 
   const [tab, setTab] = useState<AdminTab>('partidos');
   const [isCreateUserOpen, setIsCreateUserOpen] = useState(false);
   const [busqueda, setBusqueda] = useState('');
+  const [migracionCargando, setMigracionCargando] = useState(false);
+  const [resultadoMigracion, setResultadoMigracion] = useState<any>(null);
 
   // ---- Control de acceso: solo Supervisor Total ----
   if (actorRole !== 'totalSupervisor') {
@@ -435,6 +439,126 @@ export const AdminPanelModule: React.FC = () => {
 
       {/* Modales globales del panel */}
       <CreateUserModal isOpen={isCreateUserOpen} onClose={() => setIsCreateUserOpen(false)} />
+
+      {/* Tarjeta de migración de datos (solo Supervisor Total) */}
+      {actorRole === 'totalSupervisor' && (
+        <Card
+          title="Migración de Datos a Supabase"
+          subtitle="Mueve los datos guardados localmente (localStorage) a la base de datos de Supabase"
+        >
+          <p className="text-xs text-slate-400 mb-4">
+            Esto copiará partidos, candidatos, puestos, actores, testigos, votantes, actas y alertas
+            desde el almacenamiento local del navegador a Supabase. Los datos ya existentes en Supabase
+            podrían generarse errores de duplicado.
+          </p>
+          <div className="flex gap-2">
+            <Button
+              onClick={async () => {
+                setMigracionCargando(true);
+                setResultadoMigracion(null);
+                try {
+                  const res = await migrateMockToSupabase();
+                  setResultadoMigracion(res);
+                } catch (e: any) {
+                  setResultadoMigracion({ error: e.message });
+                } finally {
+                  setMigracionCargando(false);
+                }
+              }}
+              disabled={migracionCargando}
+              variant="outline"
+              size="sm"
+              icon={<Upload className="w-4 h-4" />}
+            >
+              {migracionCargando ? 'Migrando…' : 'Migrar datos a Supabase'}
+            </Button>
+          </div>
+          {resultadoMigracion && (
+            <div className="mt-4 p-3 rounded-lg bg-slate-900 border border-slate-700 text-xs">
+              <h4 className="text-xs font-bold text-emerald-400 mb-2">Resultado de la migración</h4>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="text-slate-400 uppercase">Partidos</p>
+                  <p className="text-emerald-400">{resultadoMigracion.partidos?.insertados}</p>
+                  {resultadoMigracion.partidos?.errores.length > 0 && (
+                    <p className="text-rose-400 text-[10px]">
+                      {resultadoMigracion.partidos.errores.length} error(es)
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <p className="text-slate-400 uppercase">Candidatos</p>
+                  <p className="text-emerald-400">{resultadoMigracion.candidatos?.insertados}</p>
+                  {resultadoMigracion.candidatos?.errores.length > 0 && (
+                    <p className="text-rose-400 text-[10px]">
+                      {resultadoMigracion.candidatos.errores.length} error(es)
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <p className="text-slate-400 uppercase">Puestos</p>
+                  <p className="text-emerald-400">{resultadoMigracion.puestos?.insertados}</p>
+                  {resultadoMigracion.puestos?.errores.length > 0 && (
+                    <p className="text-rose-400 text-[10px]">
+                      {resultadoMigracion.puestos.errores.length} error(es)
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <p className="text-slate-400 uppercase">Actores</p>
+                  <p className="text-emerald-400">{resultadoMigracion.actores?.insertados}</p>
+                  {resultadoMigracion.actores?.errores.length > 0 && (
+                    <p className="text-rose-400 text-[10px]">
+                      {resultadoMigracion.actores.errores.length} error(es)
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <p className="text-slate-400 uppercase">Testigos</p>
+                  <p className="text-emerald-400">{resultadoMigracion.testigos?.insertados}</p>
+                  {resultadoMigracion.testigos?.errores.length > 0 && (
+                    <p className="text-rose-400 text-[10px]">
+                      {resultadoMigracion.testigos.errores.length} error(es)
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <p className="text-slate-400 uppercase">Votantes</p>
+                  <p className="text-emerald-400">{resultadoMigracion.votantes?.insertados}</p>
+                  {resultadoMigracion.votantes?.errores.length > 0 && (
+                    <p className="text-rose-400 text-[10px]">
+                      {resultadoMigracion.votantes.errores.length} error(es)
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <p className="text-slate-400 uppercase">Actas</p>
+                  <p className="text-emerald-400">{resultadoMigracion.actas?.insertados}</p>
+                  {resultadoMigracion.actas?.errores.length > 0 && (
+                    <p className="text-rose-400 text-[10px]">
+                      {resultadoMigracion.actas.errores.length} error(es)
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <p className="text-slate-400 uppercase">Alertas</p>
+                  <p className="text-emerald-400">{resultadoMigracion.alertas?.insertados}</p>
+                  {resultadoMigracion.alertas?.errores.length > 0 && (
+                    <p className="text-rose-400 text-[10px]">
+                      {resultadoMigracion.alertas.errores.length} error(es)
+                    </p>
+                  )}
+                </div>
+              </div>
+              {resultadoMigracion.error && (
+                <p className="text-rose-400 text-[10px] mt-2">
+                  Error: {resultadoMigracion.error}
+                </p>
+              )}
+            </div>
+          )}
+        </Card>
+      )}
     </div>
   );
 };

@@ -1491,14 +1491,14 @@ export class SupabaseService {
     const partidos = supabaseMock.getPartidos();
     for (const p of partidos) {
       try {
-        const { error } = await supabase.from('partidos').insert({
+        const { error } = await supabase.from('partidos').upsert({
           id: p.id,
           nombre: p.nombre,
           siglas: p.siglas,
           color: p.color ?? null,
           logo_url: p.logoUrl ?? null,
           creado_en: p.creadoEn ?? new Date().toISOString(),
-        });
+        }, { onConflict: 'id' });
         if (error) throw error;
         resumen.partidos.insertados++;
       } catch (e: any) {
@@ -1512,7 +1512,7 @@ export class SupabaseService {
     const candidatos = supabaseMock.getCandidatos();
     for (const c of candidatos) {
       try {
-        const { error } = await supabase.from('candidatos').insert({
+        const { error } = await supabase.from('candidatos').upsert({
           id: c.id,
           partido_id: c.partidoId,
           nombre: c.nombre,
@@ -1526,7 +1526,7 @@ export class SupabaseService {
           numero_tarjeton: c.numeroTarjeton ?? null,
           numero_lista: c.numeroLista ?? null,
           creado_en: c.creadoEn ?? new Date().toISOString(),
-        });
+        }, { onConflict: 'id' });
         if (error) throw error;
         resumen.candidatos.insertados++;
       } catch (e: any) {
@@ -1540,7 +1540,7 @@ export class SupabaseService {
     const puestos = supabaseMock.getPuestos();
     for (const p of puestos) {
       try {
-        const { error } = await supabase.from('puestos_votacion').insert({
+        const { error } = await supabase.from('puestos_votacion').upsert({
           id: p.id,
           nombre: p.nombre,
           municipio_id: p.municipioId,
@@ -1560,7 +1560,7 @@ export class SupabaseService {
           participacion_historica_pct: p.participacionHistoricaPct,
           abstencionismo_pct: p.abstencionismoPct,
           cobertura_testigos_pct: p.coberturaTestigosPct,
-        });
+        }, { onConflict: 'id' });
         if (error) throw error;
         resumen.puestos.insertados++;
       } catch (e: any) {
@@ -1574,7 +1574,7 @@ export class SupabaseService {
     const actores = supabaseMock.getActors();
     for (const a of actores) {
       try {
-        const { error } = await supabase.from('actors').insert({
+        const { error } = await supabase.from('actors').upsert({
           id: a.id,
           nombre: a.nombre,
           rol: rolADB(a.role),
@@ -1589,7 +1589,7 @@ export class SupabaseService {
           territorio: a.territorio ?? null,
           created_at: a.creadoEn ?? new Date().toISOString(),
           updated_at: new Date().toISOString(),
-        });
+        }, { onConflict: 'id' });
         if (error) throw error;
         resumen.actores.insertados++;
       } catch (e: any) {
@@ -1603,7 +1603,7 @@ export class SupabaseService {
     const testigos = supabaseMock.getTestigos();
     for (const t of testigos) {
       try {
-        const { error } = await supabase.from('testigos_electorales').insert({
+        const { error } = await supabase.from('testigos_electorales').upsert({
           id: t.id,
           puesto_id: t.puestoId,
           puesto_nombre: t.puestoNombre,
@@ -1616,7 +1616,7 @@ export class SupabaseService {
           hora_llegada: t.horaLlegada ?? null,
           leader_id: t.leaderId ?? null,
           actor_id: null,
-        });
+        }, { onConflict: 'id' });
         if (error) throw error;
         resumen.testigos.insertados++;
       } catch (e: any) {
@@ -1630,7 +1630,7 @@ export class SupabaseService {
     const votantes = supabaseMock.getVotantes();
     for (const v of votantes) {
       try {
-        const { error } = await supabase.from('votantes_crm').insert({
+        const { error } = await supabase.from('votantes_crm').upsert({
           id: v.id,
           puesto_id: v.puestoId,
           nombre: v.nombre,
@@ -1647,7 +1647,7 @@ export class SupabaseService {
           actor_id: null,
           lat: v.lat ?? null,
           lng: v.lng ?? null,
-        });
+        }, { onConflict: 'id' });
         if (error) throw error;
         resumen.votantes.insertados++;
       } catch (e: any) {
@@ -1661,7 +1661,7 @@ export class SupabaseService {
     const actas = supabaseMock.getActasE14();
     for (const a of actas) {
       try {
-        const { error } = await supabase.from('actas_e14').insert({
+        const { error } = await supabase.from('actas_e14').upsert({
           id: a.id,
           puesto_id: a.puestoId,
           mesa_numero: a.mesaNumero,
@@ -1679,7 +1679,7 @@ export class SupabaseService {
           foto_acta_url: a.fotoActaUrl ?? null,
           leader_id: a.leaderId ?? null,
           actor_id: null,
-        });
+        }, { onConflict: 'id' });
         if (error) throw error;
         resumen.actas.insertados++;
       } catch (e: any) {
@@ -1693,7 +1693,7 @@ export class SupabaseService {
     const alertas = supabaseMock.getAlertas();
     for (const al of alertas) {
       try {
-        const { error } = await supabase.from('alertas_fraude').insert({
+        const { error } = await supabase.from('alertas_fraude').upsert({
           id: al.id,
           puesto_id: al.puestoId,
           puesto_nombre: al.puestoNombre,
@@ -1705,7 +1705,7 @@ export class SupabaseService {
           resuelta: al.resuelta,
           leader_id: al.leaderId ?? null,
           actor_id: null,
-        });
+        }, { onConflict: 'id' });
         if (error) throw error;
         resumen.alertas.insertados++;
       } catch (e: any) {

@@ -474,79 +474,95 @@ export const AdminPanelModule: React.FC = () => {
             </Button>
           </div>
           {resultadoMigracion && (
-            <div className="mt-4 p-3 rounded-lg bg-slate-900 border border-slate-700 text-xs">
+            <div className="mt-4 p-3 rounded-lg bg-slate-900 border border-slate-700 text-xs max-h-96 overflow-y-auto">
               <h4 className="text-xs font-bold text-emerald-400 mb-2">Resultado de la migración</h4>
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <p className="text-slate-400 uppercase">Partidos</p>
                   <p className="text-emerald-400">{resultadoMigracion.partidos?.insertados}</p>
                   {resultadoMigracion.partidos?.errores.length > 0 && (
-                    <p className="text-rose-400 text-[10px]">
-                      {resultadoMigracion.partidos.errores.length} error(es)
-                    </p>
+                    <div className="text-rose-400 text-[10px] mt-1 space-y-1">
+                      {resultadoMigracion.partidos.errores.map((e: string, i: number) => (
+                        <div key={i} className="truncate">• {e}</div>
+                      ))}
+                    </div>
                   )}
                 </div>
                 <div>
                   <p className="text-slate-400 uppercase">Candidatos</p>
                   <p className="text-emerald-400">{resultadoMigracion.candidatos?.insertados}</p>
                   {resultadoMigracion.candidatos?.errores.length > 0 && (
-                    <p className="text-rose-400 text-[10px]">
-                      {resultadoMigracion.candidatos.errores.length} error(es)
-                    </p>
+                    <div className="text-rose-400 text-[10px] mt-1 space-y-1">
+                      {resultadoMigracion.candidatos.errores.map((e: string, i: number) => (
+                        <div key={i} className="truncate">• {e}</div>
+                      ))}
+                    </div>
                   )}
                 </div>
                 <div>
                   <p className="text-slate-400 uppercase">Puestos</p>
                   <p className="text-emerald-400">{resultadoMigracion.puestos?.insertados}</p>
                   {resultadoMigracion.puestos?.errores.length > 0 && (
-                    <p className="text-rose-400 text-[10px]">
-                      {resultadoMigracion.puestos.errores.length} error(es)
-                    </p>
+                    <div className="text-rose-400 text-[10px] mt-1 space-y-1">
+                      {resultadoMigracion.puestos.errores.map((e: string, i: number) => (
+                        <div key={i} className="truncate">• {e}</div>
+                      ))}
+                    </div>
                   )}
                 </div>
                 <div>
                   <p className="text-slate-400 uppercase">Actores</p>
                   <p className="text-emerald-400">{resultadoMigracion.actores?.insertados}</p>
                   {resultadoMigracion.actores?.errores.length > 0 && (
-                    <p className="text-rose-400 text-[10px]">
-                      {resultadoMigracion.actores.errores.length} error(es)
-                    </p>
+                    <div className="text-rose-400 text-[10px] mt-1 space-y-1">
+                      {resultadoMigracion.actores.errores.map((e: string, i: number) => (
+                        <div key={i} className="truncate">• {e}</div>
+                      ))}
+                    </div>
                   )}
                 </div>
                 <div>
                   <p className="text-slate-400 uppercase">Testigos</p>
                   <p className="text-emerald-400">{resultadoMigracion.testigos?.insertados}</p>
                   {resultadoMigracion.testigos?.errores.length > 0 && (
-                    <p className="text-rose-400 text-[10px]">
-                      {resultadoMigracion.testigos.errores.length} error(es)
-                    </p>
+                    <div className="text-rose-400 text-[10px] mt-1 space-y-1">
+                      {resultadoMigracion.testigos.errores.map((e: string, i: number) => (
+                        <div key={i} className="truncate">• {e}</div>
+                      ))}
+                    </div>
                   )}
                 </div>
                 <div>
                   <p className="text-slate-400 uppercase">Votantes</p>
                   <p className="text-emerald-400">{resultadoMigracion.votantes?.insertados}</p>
                   {resultadoMigracion.votantes?.errores.length > 0 && (
-                    <p className="text-rose-400 text-[10px]">
-                      {resultadoMigracion.votantes.errores.length} error(es)
-                    </p>
+                    <div className="text-rose-400 text-[10px] mt-1 space-y-1">
+                      {resultadoMigracion.votantes.errores.map((e: string, i: number) => (
+                        <div key={i} className="truncate">• {e}</div>
+                      ))}
+                    </div>
                   )}
                 </div>
                 <div>
                   <p className="text-slate-400 uppercase">Actas</p>
                   <p className="text-emerald-400">{resultadoMigracion.actas?.insertados}</p>
                   {resultadoMigracion.actas?.errores.length > 0 && (
-                    <p className="text-rose-400 text-[10px]">
-                      {resultadoMigracion.actas.errores.length} error(es)
-                    </p>
+                    <div className="text-rose-400 text-[10px] mt-1 space-y-1">
+                      {resultadoMigracion.actas.errores.map((e: string, i: number) => (
+                        <div key={i} className="truncate">• {e}</div>
+                      ))}
+                    </div>
                   )}
                 </div>
                 <div>
                   <p className="text-slate-400 uppercase">Alertas</p>
                   <p className="text-emerald-400">{resultadoMigracion.alertas?.insertados}</p>
                   {resultadoMigracion.alertas?.errores.length > 0 && (
-                    <p className="text-rose-400 text-[10px]">
-                      {resultadoMigracion.alertas.errores.length} error(es)
-                    </p>
+                    <div className="text-rose-400 text-[10px] mt-1 space-y-1">
+                      {resultadoMigracion.alertas.errores.map((e: string, i: number) => (
+                        <div key={i} className="truncate">• {e}</div>
+                      ))}
+                    </div>
                   )}
                 </div>
               </div>

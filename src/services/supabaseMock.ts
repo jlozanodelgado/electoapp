@@ -249,6 +249,11 @@ class SupabasePostGISMockService {
     return filtered;
   }
 
+  deletePuesto(id: string): void {
+    const list = this.getPuestos().filter(p => p.id !== id);
+    this.setStorage(STORAGE_KEYS.PUESTOS, list);
+  }
+
   addActor(actor: Actor): Actor {
     const list = this.getActors();
     const nuevo = { ...actor, id: actor.id ?? generateUuid() };
@@ -274,6 +279,18 @@ class SupabasePostGISMockService {
 
   getZonas(): Zona[] {
     return [];
+  }
+
+  saveZona(zona: Zona): Zona {
+    return zona;
+  }
+
+  updateZona(id: string, updates: Partial<Zona>): Zona | null {
+    return null;
+  }
+
+  deleteZona(id: string): void {
+    // No-op en mock (no hay almacenamiento persistente de zonas aún)
   }
 
   // Partidos

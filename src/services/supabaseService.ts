@@ -157,9 +157,221 @@ export class SupabaseService {
     }
   }
 
+  static async savePuesto(puesto: Omit<PuestoVotacion, 'id'>): Promise<PuestoVotacion> {
+    const id = `puesto-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+
+    if (isSupabaseConfigured() && supabase) {
+      try {
+        const { error } = await supabase.from('puestos_votacion').insert({
+          id,
+          nombre: puesto.nombre,
+          municipio_id: puesto.municipioId,
+          departamento_id: puesto.departamentoId,
+          zona: puesto.zona,
+          comuna_barrio: puesto.comunaBarrio,
+          direccion: puesto.direccion,
+          lat: puesto.lat,
+          lng: puesto.lng,
+          censo_electoral: puesto.censoElectoral,
+          mesas_habilitadas: puesto.mesasHabilitadas,
+          meta_votos_campana: puesto.metaVotosCampana,
+          votos_proyectados: puesto.votosProyectados,
+          estado_prioridad: puesto.estadoPrioridad,
+          partido_dominante: puesto.partidoDominante,
+          margen_victoria_pct: puesto.margenVictoriaPct,
+          participacion_historica_pct: puesto.participacionHistoricaPct,
+          abstencionismo_pct: puesto.abstencionismoPct,
+          cobertura_testigos_pct: puesto.coberturaTestigosPct,
+        });
+
+        if (error) {
+          console.error('[Supabase] Error guardando puesto:', error.message);
+          throw new Error(describeSupabaseError(error, 'puestos_votacion'));
+        }
+
+        const nuevo: PuestoVotacion = {
+          id,
+          nombre: puesto.nombre,
+          municipioId: puesto.municipioId,
+          departamentoId: puesto.departamentoId,
+          zona: puesto.zona,
+          comunaBarrio: puesto.comunaBarrio,
+          direccion: puesto.direccion,
+          lat: puesto.lat,
+          lng: puesto.lng,
+          censoElectoral: puesto.censoElectoral,
+          mesasHabilitadas: puesto.mesasHabilitadas,
+          metaVotosCampana: puesto.metaVotosCampana,
+          votosProyectados: puesto.votosProyectados,
+          estadoPrioridad: puesto.estadoPrioridad,
+          partidoDominante: puesto.partidoDominante,
+          margenVictoriaPct: puesto.margenVictoriaPct,
+          participacionHistoricaPct: puesto.participacionHistoricaPct,
+          abstencionismoPct: puesto.abstencionismoPct,
+          coberturaTestigosPct: puesto.coberturaTestigosPct,
+          historico: [],
+        };
+
+        supabaseMock.updatePuesto(id, nuevo);
+        return nuevo;
+      } catch (e) {
+        console.error('[Supabase] Error guardando puesto:', e);
+        throw e;
+      }
+    }
+
+    const nuevoMockData = { ...puesto, id } as PuestoVotacion;
+    supabaseMock.updatePuesto(id, nuevoMockData);
+    return nuevoMockData;
+  }
+
+  static async updatePuesto(id: string, updates: Partial<PuestoVotacion>): Promise<PuestoVotacion[]> {
+    const updatedMock = supabaseMock.updatePuesto(id, updates);
+
+    if (isSupabaseConfigured() && supabase) {
+      try {
+        const updatesDb: any = {};
+        if (updates.nombre !== undefined) updatesDb.nombre = updates.nombre;
+        if (updates.municipioId !== undefined) updatesDb.municipio_id = updates.municipioId;
+        if (updates.departamentoId !== undefined) updatesDb.departamento_id = updates.departamentoId;
+        if (updates.zona !== undefined) updatesDb.zona = updates.zona;
+        if (updates.comunaBarrio !== undefined) updatesDb.comuna_barrio = updates.comunaBarrio;
+        if (updates.direccion !== undefined) updatesDb.direccion = updates.direccion;
+        if (updates.lat !== undefined) updatesDb.lat = updates.lat;
+        if (updates.lng !== undefined) updatesDb.lng = updates.lng;
+        if (updates.censoElectoral !== undefined) updatesDb.censo_electoral = updates.censoElectoral;
+        if (updates.mesasHabilitadas !== undefined) updatesDb.mesas_habilitadas = updates.mesasHabilitadas;
+        if (updates.metaVotosCampana !== undefined) updatesDb.meta_votos_campana = updates.metaVotosCampana;
+        if (updates.votosProyectados !== undefined) updatesDb.votos_proyectados = updates.votosProyectados;
+        if (updates.estadoPrioridad !== undefined) updatesDb.estado_prioridad = updates.estadoPrioridad;
+        if (updates.partidoDominante !== undefined) updatesDb.partido_dominante = updates.partidoDominante;
+        if (updates.margenVictoriaPct !== undefined) updatesDb.margen_victoria_pct = updates.margenVictoriaPct;
+        if (updates.participacionHistoricaPct !== undefined) updatesDb.participacion_historica_pct = updates.participacionHistoricaPct;
+        if (updates.abstencionismoPct !== undefined) updatesDb.abstencionismo_pct = updates.abstencionismoPct;
+        if (updates.coberturaTestigosPct !== undefined) updatesDb.cobertura_testigos_pct = updates.coberturaTestigosPct;
+
+        const { error } = await supabase.from('puestos_votacion').update(updatesDb).eq('id', id);
+        if (error) {
+          console.error('[Supabase] Error actualizando puesto:', error.message);
+          throw new Error(describeSupabaseError(error, 'puestos_votacion'));
+        }
+      } catch (e) {
+        console.error('[Supabase] Error actualizando puesto:', e);
+        throw e;
+      }
+    }
+
+    return updatedMock;
+  }
+
+  static async deletePuesto(id: string): Promise<void> {
+    if (isSupabaseConfigured() && supabase) {
+      try {
+        const { error } = await supabase.from('puestos_votacion').delete().eq('id', id);
+        if (error) {
+          console.error('[Supabase] Error eliminando puesto:', error.message);
+          throw new Error(describeSupabaseError(error, 'puestos_votacion'));
+        }
+      } catch (e) {
+        console.error('[Supabase] Error eliminando puesto:', e);
+        throw e;
+      }
+    }
+    if (typeof (supabaseMock as any).deletePuesto === 'function') {
+      (supabaseMock as any).deletePuesto(id);
+    }
+  }
+
   // ---------------------------------------------------------------------
-  // Testigos (electoral witnesses)
+  // Zonas (tabla separada, escalable)
   // ---------------------------------------------------------------------
+  static async saveZona(zona: Omit<Zona, 'creadoEn'>): Promise<Zona> {
+    const id = `zona-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+
+    if (isSupabaseConfigured() && supabase) {
+      try {
+        const { error } = await supabase.from('zonas').insert({
+          id,
+          municipio_id: zona.municipio_id,
+          nombre: zona.nombre,
+          codigo: zona.codigo ?? null,
+          censo: zona.censo ?? null,
+          lat: zona.lat ?? null,
+          lng: zona.lng ?? null,
+        });
+
+        if (error) {
+          console.error('[Supabase] Error guardando zona:', error.message);
+          throw new Error(describeSupabaseError(error, 'zonas'));
+        }
+
+        const nuevo: Zona = {
+          id,
+          municipio_id: zona.municipio_id,
+          nombre: zona.nombre,
+          codigo: zona.codigo,
+          censo: zona.censo,
+          lat: zona.lat,
+          lng: zona.lng,
+          creadoEn: new Date().toISOString(),
+        };
+
+        return nuevo;
+      } catch (e) {
+        console.error('[Supabase] Error guardando zona:', e);
+        throw e;
+      }
+    }
+
+    return {
+      id,
+      municipio_id: zona.municipio_id,
+      nombre: zona.nombre,
+      codigo: zona.codigo,
+      censo: zona.censo,
+      lat: zona.lat,
+      lng: zona.lng,
+      creadoEn: new Date().toISOString(),
+    };
+  }
+
+  static async updateZona(id: string, updates: Partial<Zona>): Promise<Zona | null> {
+    if (isSupabaseConfigured() && supabase) {
+      try {
+        const updatesDb: any = {};
+        if (updates.nombre !== undefined) updatesDb.nombre = updates.nombre;
+        if (updates.codigo !== undefined) updatesDb.codigo = updates.codigo;
+        if (updates.censo !== undefined) updatesDb.censo = updates.censo;
+        if (updates.lat !== undefined) updatesDb.lat = updates.lat;
+        if (updates.lng !== undefined) updatesDb.lng = updates.lng;
+
+        const { error } = await supabase.from('zonas').update(updatesDb).eq('id', id);
+        if (error) {
+          console.error('[Supabase] Error actualizando zona:', error.message);
+          throw new Error(describeSupabaseError(error, 'zonas'));
+        }
+      } catch (e) {
+        console.error('[Supabase] Error actualizando zona:', e);
+        throw e;
+      }
+    }
+    return null;
+  }
+
+  static async deleteZona(id: string): Promise<void> {
+    if (isSupabaseConfigured() && supabase) {
+      try {
+        const { error } = await supabase.from('zonas').delete().eq('id', id);
+        if (error) {
+          console.error('[Supabase] Error eliminando zona:', error.message);
+          throw new Error(describeSupabaseError(error, 'zonas'));
+        }
+      } catch (e) {
+        console.error('[Supabase] Error eliminando zona:', e);
+        throw e;
+      }
+    }
+  }
   static async getTestigos(): Promise<TestigoElectoral[]> {
     if (!isSupabaseConfigured() || !supabase) {
       return supabaseMock.getTestigos();
@@ -194,49 +406,56 @@ export class SupabaseService {
   }
 
   static async saveTestigo(testigo: Omit<TestigoElectoral, 'id'>): Promise<TestigoElectoral> {
-    const nuevoMock = supabaseMock.addTestigo(testigo);
+    // Generar ID de texto compatible con el esquema de Supabase (actas/testigos usan text PK)
+    const id = `testigo-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 
     if (isSupabaseConfigured() && supabase) {
       try {
-        const { data, error } = await supabase
-          .from('testigos_electorales')
-          .insert({
-            id: nuevoMock.id,
-            puesto_id: testigo.puestoId,
-            puesto_nombre: testigo.puestoNombre,
-            mesa_numero: testigo.mesaNumero,
-            nombre: testigo.nombre,
-            cedula: testigo.cedula,
-            telefono: testigo.telefono,
-            rol: testigo.rol,
-            estado: testigo.estado,
-            hora_llegada: testigo.horaLlegada,
-            leader_id: testigo.leaderId,
-          })
-          .select()
-          .single();
+        const { error } = await supabase.from('testigos_electorales').insert({
+          id,
+          puesto_id: testigo.puestoId,
+          puesto_nombre: testigo.puestoNombre,
+          mesa_numero: testigo.mesaNumero,
+          nombre: testigo.nombre,
+          cedula: testigo.cedula,
+          telefono: testigo.telefono || '+57 300 000 0000',
+          rol: testigo.rol,
+          estado: testigo.estado,
+          hora_llegada: testigo.horaLlegada,
+          leader_id: testigo.leaderId ?? null,
+          actor_id: null,
+        });
 
-        if (error) throw error;
-        if (data) {
-          return {
-            id: data.id,
-            puestoId: data.puesto_id,
-            puestoNombre: data.puesto_nombre,
-            mesaNumero: data.mesa_numero,
-            nombre: data.nombre,
-            cedula: data.cedula,
-            telefono: data.telefono,
-            rol: data.rol,
-            estado: data.estado,
-            horaLlegada: data.hora_llegada,
-            leaderId: data.leader_id,
-          };
+        if (error) {
+          console.error('[Supabase] Error guardando testigo:', error.message);
+          throw new Error(describeSupabaseError(error, 'testigos_electorales'));
         }
+
+        const nuevo: TestigoElectoral = {
+          id,
+          puestoId: testigo.puestoId,
+          puestoNombre: testigo.puestoNombre,
+          mesaNumero: testigo.mesaNumero,
+          nombre: testigo.nombre,
+          cedula: testigo.cedula,
+          telefono: testigo.telefono || '+57 300 000 0000',
+          rol: testigo.rol,
+          estado: testigo.estado,
+          horaLlegada: testigo.horaLlegada,
+          leaderId: testigo.leaderId,
+        };
+
+        // Guardar en mock solo como caché local de respaldo
+        supabaseMock.addTestigo(nuevo);
+        return nuevo;
       } catch (e) {
-        console.warn('Error guardando testigo en Supabase:', e);
+        console.error('[Supabase] Error guardando testigo:', e);
+        throw e;
       }
     }
 
+    // Fallback solo si Supabase no está configurado
+    const nuevoMock = supabaseMock.addTestigo(testigo);
     return nuevoMock;
   }
 
@@ -254,9 +473,14 @@ export class SupabaseService {
         if (updates.rol !== undefined) updatesDb.rol = updates.rol;
         if (updates.leaderId !== undefined) updatesDb.leader_id = updates.leaderId;
 
-        await supabase.from('testigos_electorales').update(updatesDb).eq('id', id);
+        const { error } = await supabase.from('testigos_electorales').update(updatesDb).eq('id', id);
+        if (error) {
+          console.error('[Supabase] Error actualizando testigo:', error.message);
+          throw new Error(describeSupabaseError(error, 'testigos_electorales'));
+        }
       } catch (e) {
-        console.warn('Error actualizando testigo en Supabase:', e);
+        console.error('[Supabase] Error actualizando testigo:', e);
+        throw e;
       }
     }
 
@@ -304,57 +528,61 @@ export class SupabaseService {
   }
 
   static async saveVotante(votante: Omit<VotanteCRM, 'id'>): Promise<VotanteCRM> {
-    const nuevoMock = supabaseMock.addVotante(votante);
+    const id = `votante-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 
     if (isSupabaseConfigured() && supabase) {
       try {
-        const { data, error } = await supabase
-          .from('votantes_crm')
-          .insert({
-            id: nuevoMock.id,
-            puesto_id: votante.puestoId,
-            nombre: votante.nombre,
-            cedula: votante.cedula,
-            telefono: votante.telefono,
-            direccion: votante.direccion,
-            barrio: votante.barrio,
-            intencion_voto: votante.intencionVoto,
-            lider_asignado: votante.liderAsignado,
-            contactado: votante.contactado,
-            necesita_transporte: votante.necesitaTransporte,
-            ya_voto: votante.yaVoto,
-            leader_id: votante.leaderId,
-            lat: votante.lat,
-            lng: votante.lng,
-          })
-          .select()
-          .single();
+        const { error } = await supabase.from('votantes_crm').insert({
+          id,
+          puesto_id: votante.puestoId,
+          nombre: votante.nombre,
+          cedula: votante.cedula,
+          telefono: votante.telefono || '+57 300 000 0000',
+          direccion: votante.direccion || 'Calle principal',
+          barrio: votante.barrio || 'Barrio Central',
+          intencion_voto: votante.intencionVoto,
+          lider_asignado: votante.liderAsignado || 'Coordinador Barrial',
+          contactado: votante.contactado ?? true,
+          necesita_transporte: votante.necesitaTransporte ?? false,
+          ya_voto: votante.yaVoto ?? false,
+          leader_id: votante.leaderId ?? null,
+          actor_id: null,
+          lat: votante.lat ?? null,
+          lng: votante.lng ?? null,
+        });
 
-        if (error) throw error;
-        if (data) {
-          return {
-            id: data.id,
-            puestoId: data.puesto_id,
-            nombre: data.nombre,
-            cedula: data.cedula,
-            telefono: data.telefono,
-            direccion: data.direccion,
-            barrio: data.barrio,
-            intencionVoto: data.intencion_voto,
-            liderAsignado: data.lider_asignado,
-            contactado: data.contactado,
-            necesitaTransporte: data.necesita_transporte,
-            yaVoto: data.ya_voto,
-            leaderId: data.leader_id,
-            lat: data.lat,
-            lng: data.lng,
-          };
+        if (error) {
+          console.error('[Supabase] Error guardando votante:', error.message);
+          throw new Error(describeSupabaseError(error, 'votantes_crm'));
         }
+
+        const nuevo: VotanteCRM = {
+          id,
+          puestoId: votante.puestoId,
+          nombre: votante.nombre,
+          cedula: votante.cedula,
+          telefono: votante.telefono || '+57 300 000 0000',
+          direccion: votante.direccion || 'Calle principal',
+          barrio: votante.barrio || 'Barrio Central',
+          intencionVoto: votante.intencionVoto,
+          liderAsignado: votante.liderAsignado || 'Coordinador Barrial',
+          contactado: votante.contactado ?? true,
+          necesitaTransporte: votante.necesitaTransporte ?? false,
+          yaVoto: votante.yaVoto ?? false,
+          leaderId: votante.leaderId,
+          lat: votante.lat,
+          lng: votante.lng,
+        };
+
+        supabaseMock.addVotante(nuevo);
+        return nuevo;
       } catch (e) {
-        console.warn('Error guardando votante en Supabase:', e);
+        console.error('[Supabase] Error guardando votante:', e);
+        throw e;
       }
     }
 
+    const nuevoMock = supabaseMock.addVotante(votante);
     return nuevoMock;
   }
 
@@ -378,9 +606,14 @@ export class SupabaseService {
         if (updates.lat !== undefined) updatesDb.lat = updates.lat;
         if (updates.lng !== undefined) updatesDb.lng = updates.lng;
 
-        await supabase.from('votantes_crm').update(updatesDb).eq('id', id);
+        const { error } = await supabase.from('votantes_crm').update(updatesDb).eq('id', id);
+        if (error) {
+          console.error('[Supabase] Error actualizando votante:', error.message);
+          throw new Error(describeSupabaseError(error, 'votantes_crm'));
+        }
       } catch (e) {
-        console.warn('Error actualizando votante en Supabase:', e);
+        console.error('[Supabase] Error actualizando votante:', e);
+        throw e;
       }
     }
 
@@ -429,59 +662,63 @@ export class SupabaseService {
   }
 
   static async saveActaE14(acta: Omit<ActaE14, 'id'>): Promise<ActaE14> {
-    const nuevoMock = supabaseMock.addActaE14(acta);
+    const id = `acta-e14-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 
     if (isSupabaseConfigured() && supabase) {
       try {
-        const { data, error } = await supabase
-          .from('actas_e14')
-          .insert({
-            id: nuevoMock.id,
-            puesto_id: acta.puestoId,
-            mesa_numero: acta.mesaNumero,
-            hora_reporte: acta.horaReporte,
-            digitalizado_por: acta.digitalizadoPor,
-            votos_coalicion: acta.votosCoalicion,
-            votos_alianza: acta.votosAlianza,
-            votos_unidad: acta.votosUnidad,
-            votos_otros: acta.votosOtros,
-            votos_blanco: acta.votosBlanco,
-            votos_nulos: acta.votosNulos,
-            votos_no_marcados: acta.votosNoMarcados,
-            total_votos_urna: acta.totalVotosUrna,
-            estado_revision: acta.estadoRevision,
-            foto_acta_url: acta.fotoActaUrl,
-            leader_id: acta.leaderId,
-          })
-          .select()
-          .single();
+        const { error } = await supabase.from('actas_e14').insert({
+          id,
+          puesto_id: acta.puestoId,
+          mesa_numero: acta.mesaNumero,
+          hora_reporte: acta.horaReporte,
+          digitalizado_por: acta.digitalizadoPor ?? null,
+          votos_coalicion: acta.votosCoalicion,
+          votos_alianza: acta.votosAlianza,
+          votos_unidad: acta.votosUnidad,
+          votos_otros: acta.votosOtros,
+          votos_blanco: acta.votosBlanco,
+          votos_nulos: acta.votosNulos,
+          votos_no_marcados: acta.votosNoMarcados ?? 0,
+          total_votos_urna: acta.totalVotosUrna,
+          estado_revision: acta.estadoRevision,
+          foto_acta_url: acta.fotoActaUrl ?? null,
+          leader_id: acta.leaderId ?? null,
+          actor_id: null,
+        });
 
-        if (error) throw error;
-        if (data) {
-          return {
-            id: data.id,
-            puestoId: data.puesto_id,
-            mesaNumero: data.mesa_numero,
-            horaReporte: data.hora_reporte,
-            digitalizadoPor: data.digitalizado_por,
-            votosCoalicion: data.votos_coalicion,
-            votosAlianza: data.votos_alianza,
-            votosUnidad: data.votos_unidad,
-            votosOtros: data.votos_otros,
-            votosBlanco: data.votos_blanco,
-            votosNulos: data.votos_nulos,
-            votosNoMarcados: data.votos_no_marcados,
-            totalVotosUrna: data.total_votos_urna,
-            estadoRevision: data.estado_revision,
-            fotoActaUrl: data.foto_acta_url,
-            leaderId: data.leader_id,
-          };
+        if (error) {
+          console.error('[Supabase] Error guardando acta E14:', error.message);
+          throw new Error(describeSupabaseError(error, 'actas_e14'));
         }
+
+        const nuevo: ActaE14 = {
+          id,
+          puestoId: acta.puestoId,
+          mesaNumero: acta.mesaNumero,
+          horaReporte: acta.horaReporte,
+          digitalizadoPor: acta.digitalizadoPor ?? '',
+          votosCoalicion: acta.votosCoalicion,
+          votosAlianza: acta.votosAlianza,
+          votosUnidad: acta.votosUnidad,
+          votosOtros: acta.votosOtros,
+          votosBlanco: acta.votosBlanco,
+          votosNulos: acta.votosNulos,
+          votosNoMarcados: acta.votosNoMarcados ?? 0,
+          totalVotosUrna: acta.totalVotosUrna,
+          estadoRevision: acta.estadoRevision,
+          fotoActaUrl: acta.fotoActaUrl,
+          leaderId: acta.leaderId,
+        };
+
+        supabaseMock.addActaE14(nuevo);
+        return nuevo;
       } catch (e) {
-        console.warn('Error sincronizando acta con Supabase:', e);
+        console.error('[Supabase] Error guardando acta E14:', e);
+        throw e;
       }
     }
 
+    const nuevoMock = supabaseMock.addActaE14(acta);
     return nuevoMock;
   }
 
@@ -503,9 +740,14 @@ export class SupabaseService {
         if (updates.fotoActaUrl !== undefined) updatesDb.foto_acta_url = updates.fotoActaUrl;
         if (updates.leaderId !== undefined) updatesDb.leader_id = updates.leaderId;
 
-        await supabase.from('actas_e14').update(updatesDb).eq('id', id);
+        const { error } = await supabase.from('actas_e14').update(updatesDb).eq('id', id);
+        if (error) {
+          console.error('[Supabase] Error actualizando acta:', error.message);
+          throw new Error(describeSupabaseError(error, 'actas_e14'));
+        }
       } catch (e) {
-        console.warn('Error actualizando acta en Supabase:', e);
+        console.error('[Supabase] Error actualizando acta:', e);
+        throw e;
       }
     }
 
@@ -548,47 +790,51 @@ export class SupabaseService {
   }
 
   static async saveAlertaFraude(alerta: Omit<AlertaFraude, 'id'>): Promise<AlertaFraude> {
-    const nuevoMock = supabaseMock.addAlertaFraude(alerta);
+    const id = `alerta-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 
     if (isSupabaseConfigured() && supabase) {
       try {
-        const { data, error } = await supabase
-          .from('alertas_fraude')
-          .insert({
-            id: nuevoMock.id,
-            puesto_id: alerta.puestoId,
-            puesto_nombre: alerta.puestoNombre,
-            mesa_numero: alerta.mesaNumero,
-            severidad: alerta.severidad,
-            tipo: alerta.tipo,
-            descripcion: alerta.descripcion,
-            timestamp: alerta.timestamp,
-            resuelta: alerta.resuelta,
-            leader_id: alerta.leaderId,
-          })
-          .select()
-          .single();
+        const { error } = await supabase.from('alertas_fraude').insert({
+          id,
+          puesto_id: alerta.puestoId,
+          puesto_nombre: alerta.puestoNombre,
+          mesa_numero: alerta.mesaNumero,
+          severidad: alerta.severidad,
+          tipo: alerta.tipo,
+          descripcion: alerta.descripcion,
+          timestamp: alerta.timestamp,
+          resuelta: alerta.resuelta ?? false,
+          leader_id: alerta.leaderId ?? null,
+          actor_id: null,
+        });
 
-        if (error) throw error;
-        if (data) {
-          return {
-            id: data.id,
-            puestoId: data.puesto_id,
-            puestoNombre: data.puesto_nombre,
-            mesaNumero: data.mesa_numero,
-            severidad: data.severidad,
-            tipo: data.tipo,
-            descripcion: data.descripcion,
-            timestamp: data.timestamp,
-            resuelta: data.resuelta,
-            leaderId: data.leader_id,
-          };
+        if (error) {
+          console.error('[Supabase] Error guardando alerta:', error.message);
+          throw new Error(describeSupabaseError(error, 'alertas_fraude'));
         }
+
+        const nuevo: AlertaFraude = {
+          id,
+          puestoId: alerta.puestoId,
+          puestoNombre: alerta.puestoNombre,
+          mesaNumero: alerta.mesaNumero,
+          severidad: alerta.severidad,
+          tipo: alerta.tipo,
+          descripcion: alerta.descripcion,
+          timestamp: alerta.timestamp,
+          resuelta: alerta.resuelta ?? false,
+          leaderId: alerta.leaderId,
+        };
+
+        supabaseMock.addAlertaFraude(nuevo);
+        return nuevo;
       } catch (e) {
-        console.warn('Error guardando alerta en Supabase:', e);
+        console.error('[Supabase] Error guardando alerta:', e);
+        throw e;
       }
     }
 
+    const nuevoMock = supabaseMock.addAlertaFraude(alerta);
     return nuevoMock;
   }
 
@@ -597,12 +843,17 @@ export class SupabaseService {
 
     if (isSupabaseConfigured() && supabase) {
       try {
-        await supabase
+        const { error } = await supabase
           .from('alertas_fraude')
           .update({ resuelta: true })
           .eq('id', id);
+        if (error) {
+          console.error('[Supabase] Error resolviendo alerta:', error.message);
+          throw new Error(describeSupabaseError(error, 'alertas_fraude'));
+        }
       } catch (e) {
-        console.warn('Error resolviendo alerta en Supabase:', e);
+        console.error('[Supabase] Error resolviendo alerta:', e);
+        throw e;
       }
     }
 
@@ -741,34 +992,44 @@ export class SupabaseService {
   }
 
   static async savePartido(partido: Omit<Partido, 'id' | 'creadoEn'>): Promise<Partido> {
-    const nuevo: Partido = {
-      ...partido,
-      id: generateUuid(),
-      creadoEn: new Date().toISOString(),
-    };
+    const id = generateUuid();
+    const creadoEn = new Date().toISOString();
 
     if (isSupabaseConfigured() && supabase) {
       try {
         const { error } = await supabase.from('partidos').insert({
-          id: nuevo.id,
-          nombre: nuevo.nombre,
-          siglas: nuevo.siglas,
-          color: nuevo.color,
-          logo_url: nuevo.logoUrl,
+          id,
+          nombre: partido.nombre,
+          siglas: partido.siglas,
+          color: partido.color ?? null,
+          logo_url: partido.logoUrl ?? null,
+          creado_en: creadoEn,
         });
 
         if (error) {
           console.error('[Supabase] Error guardando partido:', error.message);
           throw new Error(describeSupabaseError(error, 'partidos'));
         }
+
+        const nuevo: Partido = {
+          id,
+          nombre: partido.nombre,
+          siglas: partido.siglas,
+          color: partido.color,
+          logoUrl: partido.logoUrl,
+          creadoEn,
+        };
+
+        supabaseMock.addPartido(nuevo);
+        return nuevo;
       } catch (e) {
         console.error('[Supabase] Error guardando partido:', e);
         throw e;
       }
     }
 
-    supabaseMock.addPartido(nuevo);
-    return nuevo;
+    const nuevoMock = supabaseMock.addPartido({ ...partido, id, creadoEn } as Partido);
+    return nuevoMock;
   }
 
   static async updatePartido(
@@ -861,48 +1122,65 @@ export class SupabaseService {
 
   static async saveCandidato(candidato: Omit<Candidato, 'id' | 'creadoEn'>): Promise<Candidato> {
     const cedula = String(candidato.cedula ?? '').replace(/\D/g, '');
+    const id = generateUuid();
+    const creadoEn = new Date().toISOString();
 
-    const nuevo: Candidato = {
-      ...candidato,
-      // Se guardan solo los dígitos para que "1.234.567" y "1234567" no se
-      // traten como cédulas distintas al validar la restricción UNIQUE.
-      cedula: cedula || String(candidato.cedula ?? ''),
-      id: generateUuid(),
-      creadoEn: new Date().toISOString(),
-    };
-
-    if (!isUuid(nuevo.partidoId)) {
+    if (!isUuid(candidato.partidoId)) {
       throw new Error('Selecciona un partido válido antes de guardar el candidato.');
     }
 
     if (isSupabaseConfigured() && supabase) {
       try {
         const { error } = await supabase.from('candidatos').insert({
-          id: nuevo.id,
-          partido_id: nuevo.partidoId,
-          nombre: nuevo.nombre,
-          apellido: nuevo.apellido,
-          cedula: nuevo.cedula,
-          cargo: nuevo.cargo,
-          numero_tarjeton: nuevo.numeroTarjeton,
-          numero_lista: nuevo.numeroLista,
-          departamento_id: nuevo.departamentoId,
-          municipio_id: nuevo.municipioId,
-          foto_url: nuevo.fotoUrl,
+          id,
+          partido_id: candidato.partidoId,
+          nombre: candidato.nombre,
+          apellido: candidato.apellido ?? null,
+          cedula: cedula || String(candidato.cedula ?? ''),
+          cargo: candidato.cargo,
+          numero_tarjeton: candidato.numeroTarjeton ?? null,
+          numero_lista: candidato.numeroLista ?? null,
+          departamento_id: candidato.departamentoId ?? null,
+          municipio_id: candidato.municipioId ?? null,
+          foto_url: candidato.fotoUrl ?? null,
+          creado_en: creadoEn,
         });
 
         if (error) {
           console.error('[Supabase] Error guardando candidato:', error.message);
           throw new Error(describeSupabaseError(error, 'candidatos'));
         }
+
+        const nuevo: Candidato = {
+          id,
+          partidoId: candidato.partidoId,
+          nombre: candidato.nombre,
+          apellido: candidato.apellido ?? undefined,
+          cedula: cedula || String(candidato.cedula ?? ''),
+          cargo: candidato.cargo,
+          numeroTarjeton: candidato.numeroTarjeton ?? undefined,
+          numeroLista: candidato.numeroLista ?? undefined,
+          departamentoId: candidato.departamentoId ?? undefined,
+          municipioId: candidato.municipioId ?? undefined,
+          fotoUrl: candidato.fotoUrl ?? undefined,
+          creadoEn,
+        };
+
+        supabaseMock.addCandidato(nuevo);
+        return nuevo;
       } catch (e) {
         console.error('[Supabase] Error guardando candidato:', e);
         throw e;
       }
     }
 
-    supabaseMock.addCandidato(nuevo);
-    return nuevo;
+    const nuevoMock = supabaseMock.addCandidato({
+      ...candidato,
+      id,
+      creadoEn,
+      cedula: cedula || String(candidato.cedula ?? ''),
+    } as Candidato);
+    return nuevoMock;
   }
 
   static async updateCandidato(
@@ -1011,27 +1289,28 @@ export class SupabaseService {
   }
 
   static async saveActor(actor: Omit<Actor, 'id' | 'creadoEn'>): Promise<Actor> {
+    const id = generateUuid();
+    const creadoEn = new Date().toISOString();
+
     const nuevo: Actor = {
       ...actor,
-      id: generateUuid(),
-      creadoEn: new Date().toISOString(),
+      id,
+      creadoEn,
     };
 
-    supabaseMock.addActor(nuevo);
+    // El enum actor_role de PostgreSQL usa estos valores en la BD real.
+    const roleDb =
+      nuevo.role === 'totalSupervisor'
+        ? 'supervisor_total'
+        : nuevo.role === 'candidateSupervisor'
+        ? 'supervisor_candidato'
+        : nuevo.role === 'leader'
+        ? 'lider'
+        : nuevo.role === 'witness'
+        ? 'testigo'
+        : 'votante';
 
     if (isSupabaseConfigured() && supabase) {
-      // El enum actor_role de PostgreSQL usa estos valores en la BD real.
-      const roleDb =
-        nuevo.role === 'totalSupervisor'
-          ? 'supervisor_total'
-          : nuevo.role === 'candidateSupervisor'
-          ? 'supervisor_candidato'
-          : nuevo.role === 'leader'
-          ? 'lider'
-          : nuevo.role === 'witness'
-          ? 'testigo'
-          : 'votante';
-
       try {
         const { error } = await supabase.from('actors').insert({
           id: nuevo.id,
@@ -1052,12 +1331,18 @@ export class SupabaseService {
 
         if (error) {
           console.error('[Supabase] Error guardando actor:', error.message);
+          throw new Error(describeSupabaseError(error, 'actors'));
         }
+
+        supabaseMock.addActor(nuevo);
+        return nuevo;
       } catch (e) {
         console.error('[Supabase] Error guardando actor:', e);
+        throw e;
       }
     }
 
+    supabaseMock.addActor(nuevo);
     return nuevo;
   }
 

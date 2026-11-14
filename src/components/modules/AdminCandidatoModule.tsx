@@ -4,7 +4,7 @@ import { useSecurityStore } from '../../store/securityStore';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
-import { Pencil, Trash2, UserPlus, Users, Shield, Target, Flag, FileText } from 'lucide-react';
+import { Pencil, Trash2, UserPlus, Users, Shield, Target, Flag, FileText, CheckCircle, Check } from 'lucide-react';
 import { Partido, Candidato } from '../../types/electoral';
 import { ImportarMasivoCandidato } from './ImportarMasivoCandidato';
 import { CreateUserModal } from '../modals/CreateUserModal';
@@ -22,12 +22,20 @@ export const AdminCandidatoModule: React.FC = () => {
     setIsNewWitnessOpen,
     isNewVoterOpen,
     setIsNewVoterOpen,
+    editingActor,
+    setEditingActor,
+    editingTestigo,
+    setEditingTestigo,
+    editingVoter,
+    setEditingVoter,
+    updateTestigo,
+    updateVotante,
   } = useElectoralStore();
 
   const { currentActor } = useSecurityStore();
   const actor = currentActor();
 
-  const [tab, setTab] = useState<'lideres' | 'testigos' | 'votantes' | 'importar'>('lideres');
+  const [tab, setTab] = useState<'lideres' | 'testigos' | 'votantes' | 'importar' | 'comando'>('lideres');
   const [busqueda, setBusqueda] = useState('');
   const [isNewLeaderOpen, setIsNewLeaderOpen] = useState(false);
 
@@ -216,6 +224,17 @@ export const AdminCandidatoModule: React.FC = () => {
           <FileText className="w-3.5 h-3.5" />
           <span>Importar Excel</span>
         </button>
+        <button
+          onClick={() => setTab('comando')}
+          className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold transition-all ${
+            tab === 'comando'
+              ? 'bg-purple-600 text-white shadow-md'
+              : 'text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <Target className="w-3.5 h-3.5" />
+          <span>Comando Campaña</span>
+        </button>
       </div>
 
       {/* TAB LÍDERES */}
@@ -246,6 +265,7 @@ export const AdminCandidatoModule: React.FC = () => {
                     <th className="p-2">Líder</th>
                     <th className="p-2 text-center">Testigos</th>
                     <th className="p-2 text-center">Votantes</th>
+                    <th className="p-2 text-center">Acciones</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/50">
@@ -263,6 +283,14 @@ export const AdminCandidatoModule: React.FC = () => {
                         </td>
                         <td className="p-2 text-center">
                           <span className="font-mono font-bold text-amber-400">{votantesLider.length}</span>
+                        </td>
+                        <td className="p-2 text-center">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => { setEditingActor(l as any); }}
+                            icon={<Pencil className="w-3 h-3" />}
+                          />
                         </td>
                       </tr>
                     );
@@ -304,6 +332,7 @@ export const AdminCandidatoModule: React.FC = () => {
                     <th className="p-2 text-center">Mesa</th>
                     <th className="p-2">Líder</th>
                     <th className="p-2">Estado</th>
+                    <th className="p-2 text-center">Acciones</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/50">
@@ -327,6 +356,14 @@ export const AdminCandidatoModule: React.FC = () => {
                           }`}>
                             {t.estado}
                           </span>
+                        </td>
+                        <td className="p-2 text-center">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => { setEditingTestigo(t); }}
+                            icon={<Pencil className="w-3 h-3" />}
+                          />
                         </td>
                       </tr>
                     );
@@ -368,6 +405,7 @@ export const AdminCandidatoModule: React.FC = () => {
                     <th className="p-2">Intención</th>
                     <th className="p-2">Líder</th>
                     <th className="p-2 text-center">Día D</th>
+                    <th className="p-2 text-center">Acciones</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/50">
@@ -400,6 +438,14 @@ export const AdminCandidatoModule: React.FC = () => {
                             {v.yaVoto ? 'VOTÓ' : 'PENDIENTE'}
                           </span>
                         </td>
+                        <td className="p-2 text-center">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => { setEditingVoter(v); }}
+                            icon={<Pencil className="w-3 h-3" />}
+                          />
+                        </td>
                       </tr>
                     );
                   })}
@@ -413,6 +459,160 @@ export const AdminCandidatoModule: React.FC = () => {
       {/* Importación masiva */}
       {tab === 'importar' && (
         <ImportarMasivoCandidato candidatoId={miCandidatoId} actorId={miActorId} />
+      )}
+
+      {/* TAB COMANDO DE CAMPAÑA */}
+      {tab === 'comando' && (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-bold text-white uppercase tracking-wider text-[10px]">
+              Centro de Comando
+            </h3>
+            <span className="text-[10px] text-slate-400 font-medium">
+              Todo lo que ves abajo pertenece a tu candidato: {miCandidato?.nombre}
+            </span>
+          </div>
+
+          {/* KPIs */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Card className="bg-slate-900/90 border border-slate-800/80 rounded-xl p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-xs text-slate-400 font-medium uppercase tracking-wider">Líderes</span>
+                  <div className="text-2xl font-black font-mono text-blue-400 mt-1">{misLideres.length}</div>
+                </div>
+                <div className="w-8 h-8 rounded-full bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-blue-400">
+                  <Users className="w-4 h-4" />
+                </div>
+              </div>
+            </Card>
+            <Card className="bg-slate-900/90 border border-slate-800/80 rounded-xl p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-xs text-slate-400 font-medium uppercase tracking-wider">Testigos</span>
+                  <div className="text-2xl font-black font-mono text-purple-400 mt-1">{misTestigos.length}</div>
+                </div>
+                <div className="w-8 h-8 rounded-full bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400">
+                  <Users className="w-4 h-4" />
+                </div>
+              </div>
+            </Card>
+            <Card className="bg-slate-900/90 border border-slate-800/80 rounded-xl p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-xs text-slate-400 font-medium uppercase tracking-wider">Testigos Confirmados</span>
+                  <div className="text-2xl font-black font-mono text-emerald-400 mt-1">
+                    {misTestigos.filter(t => t.estado === 'confirmado').length}
+                  </div>
+                </div>
+                <div className="w-8 h-8 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                  <CheckCircle className="w-4 h-4" />
+                </div>
+              </div>
+            </Card>
+            <Card className="bg-slate-900/90 border border-slate-800/80 rounded-xl p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-xs text-slate-400 font-medium uppercase tracking-wider">Votantes</span>
+                  <div className="text-2xl font-black font-mono text-amber-400 mt-1">{misVotantes.length}</div>
+                </div>
+                <div className="w-8 h-8 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
+                  <Target className="w-4 h-4" />
+                </div>
+              </div>
+            </Card>
+            <Card className="bg-slate-900/90 border border-slate-800/80 rounded-xl p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-xs text-slate-400 font-medium uppercase tracking-wider">Votaron Día D</span>
+                  <div className="text-2xl font-black font-mono text-emerald-400 mt-1">
+                    {misVotantes.filter(v => v.yaVoto).length}
+                  </div>
+                </div>
+                <div className="w-8 h-8 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                  <Check className="w-4 h-4" />
+                </div>
+              </div>
+            </Card>
+          </div>
+
+          {/* Evolución rápida: intención de voto */}
+          <div className="bg-slate-900/90 border border-slate-800/80 rounded-xl p-5">
+            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Intención de voto (CRM)</h4>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="bg-slate-950/60 rounded-lg p-3 border border-slate-800">
+                <span className="text-[10px] text-emerald-400 font-bold uppercase">Voto Duro</span>
+                <div className="text-xl font-mono text-white mt-1">
+                  {misVotantes.filter(v => v.intencionVoto === 'voto_duro').length}
+                </div>
+              </div>
+              <div className="bg-slate-950/60 rounded-lg p-3 border border-slate-800">
+                <span className="text-[10px] text-blue-400 font-bold uppercase">Voto Blando</span>
+                <div className="text-xl font-mono text-white mt-1">
+                  {misVotantes.filter(v => v.intencionVoto === 'voto_blando').length}
+                </div>
+              </div>
+              <div className="bg-slate-950/60 rounded-lg p-3 border border-slate-800">
+                <span className="text-[10px] text-amber-400 font-bold uppercase">Indecisos</span>
+                <div className="text-xl font-mono text-white mt-1">
+                  {misVotantes.filter(v => v.intencionVoto === 'indeciso').length}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Tabla de testigos del comando */}
+          <div className="bg-slate-900/90 border border-slate-800/80 rounded-xl overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs text-slate-300">
+                <thead className="bg-slate-900/50 text-slate-400 uppercase font-mono text-[10px] border-b border-slate-800">
+                  <tr>
+                    <th className="p-3">Testigo</th>
+                    <th className="p-3">Puesto / Mesa</th>
+                    <th className="p-3">Líder</th>
+                    <th className="p-3">Estado</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/50">
+                  {misTestigos.map(t => {
+                    const lider = misLideres.find(l => l.id === t.leaderId);
+                    return (
+                      <tr key={t.id} className="hover:bg-slate-800/30 transition-colors">
+                        <td className="p-3">
+                          <p className="font-semibold text-white">{t.nombre}</p>
+                          <span className="text-[9px] text-slate-500 font-mono">CC {t.cedula}</span>
+                        </td>
+                        <td className="p-3">
+                          <span className="text-slate-200">{t.puestoNombre || '-'}</span>
+                          <span className="text-[9px] text-slate-500 block">Mesa {t.mesaNumero}</span>
+                        </td>
+                        <td className="p-3">
+                          <span className="text-xs text-slate-300">{lider?.nombre || '-'}</span>
+                        </td>
+                        <td className="p-3">
+                          <span className={"text-[9px] px-2 py-0.5 rounded font-bold " + (
+                            t.estado === 'confirmado' ? 'bg-emerald-500/20 text-emerald-400' :
+                            t.estado === 'pendiente' ? 'bg-amber-500/20 text-amber-400' :
+                            'bg-rose-500/20 text-rose-400'
+                          )}>
+                            {t.estado}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {misTestigos.length === 0 && (
+                    <tr>
+                      <td colSpan={4} className="p-4 text-center text-slate-500 text-xs">
+                        No hay testigos registrados aún.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Modal de creación de líder (rol fijo, amarrado al candidato y supervisor actuales) */}

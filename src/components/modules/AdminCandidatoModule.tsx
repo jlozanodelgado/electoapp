@@ -7,6 +7,7 @@ import { Badge } from '../ui/Badge';
 import { Pencil, Trash2, UserPlus, Users, Shield, Target, Flag, FileText } from 'lucide-react';
 import { Partido, Candidato } from '../../types/electoral';
 import { ImportarMasivoCandidato } from './ImportarMasivoCandidato';
+import { CreateUserModal } from '../modals/CreateUserModal';
 
 export const AdminCandidatoModule: React.FC = () => {
   const {
@@ -28,6 +29,7 @@ export const AdminCandidatoModule: React.FC = () => {
 
   const [tab, setTab] = useState<'lideres' | 'testigos' | 'votantes' | 'importar'>('lideres');
   const [busqueda, setBusqueda] = useState('');
+  const [isNewLeaderOpen, setIsNewLeaderOpen] = useState(false);
 
   const esSupervisorCandidato = actorRole === 'candidateSupervisor';
   const miCandidatoId = actor?.candidatoId;
@@ -226,7 +228,7 @@ export const AdminCandidatoModule: React.FC = () => {
             <Button
               variant="primary"
               size="sm"
-              onClick={() => setIsNewWitnessOpen(true)}
+              onClick={() => setIsNewLeaderOpen(true)}
               icon={<UserPlus className="w-3.5 h-3.5" />}
             >
               Nuevo Líder
@@ -412,6 +414,14 @@ export const AdminCandidatoModule: React.FC = () => {
       {tab === 'importar' && (
         <ImportarMasivoCandidato candidatoId={miCandidatoId} actorId={miActorId} />
       )}
+
+      {/* Modal de creación de líder (rol fijo, amarrado al candidato y supervisor actuales) */}
+      <CreateUserModal
+        isOpen={isNewLeaderOpen}
+        onClose={() => setIsNewLeaderOpen(false)}
+        defaultRole="leader"
+        lockRole
+      />
     </div>
   );
 };

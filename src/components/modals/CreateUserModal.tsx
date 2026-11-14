@@ -10,11 +10,13 @@ import { DEPARTAMENTOS as MOCK_DEPARTAMENTOS, MUNICIPIOS as MOCK_MUNICIPIOS } fr
 interface Props {
   isOpen: boolean;
   onClose: () => void;
+  defaultRole?: Actor['role'];
+  lockRole?: boolean;
 }
 
 type ScopeLevel = 'national' | 'department' | 'municipality';
 
-export const CreateUserModal: React.FC<Props> = ({ isOpen, onClose }) => {
+export const CreateUserModal: React.FC<Props> = ({ isOpen, onClose, defaultRole, lockRole = false }) => {
   const { registerUser, currentActor, actors } = useSecurityStore();
   const { partidos, candidatos, departamentos, municipios } = useElectoralStore();
   const actorActivo = currentActor();
@@ -33,17 +35,22 @@ export const CreateUserModal: React.FC<Props> = ({ isOpen, onClose }) => {
         { value: 'witness', label: 'Testigo Electoral', desc: 'Monitorea mesas y digitaliza actas E-14' },
       ];
 
+  // Si se bloquea el rol, solo se ofrece ese rol
+  const rolesOfrecidos = lockRole && defaultRole
+    ? allowedRoles.filter((r) => r.value === defaultRole)
+    : allowedRoles;
+
   const [nombre, setNombre] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [rol, setRol] = useState<Actor['role']>(allowedRoles[0]?.value || 'leader');
+  const [rol, setRol] = useState<Actor['role']>(defaultRole || allowedRoles[0]?.value || 'leader');
 
   // Campos condicionales
   const [partidoId, setPartidoId] = useState('');
   const [candidatoId, setCandidatoId] = useState('');
   const [departamentoId, setDepartamentoId] = useState('');
   const [municipioId, setMunicipioId] = useState('');
-  const [supervisorId, setSupervisorId] = useState('');
+  const [supervisorId, setSupervisorId] = useState(isCandidateSupervisor ? (actorActivo?.id || '') : '');
   const [leaderId, setLeaderId] = useState('');
 
   const [loading, setLoading] = useState(false);
@@ -67,8 +74,11 @@ export const CreateUserModal: React.FC<Props> = ({ isOpen, onClose }) => {
   // Candidato seleccionado (para leer su cargo)
   const candidatoSeleccionado = candidatos.find(c => c.id === candidatoId);
 
-  // Supervisores disponibles (candidateSupervisors) para amarrar un líder
-  const supervisoresDisponibles = actors.filter((a: Actor) => a.role === 'candidateSupervisor');
+  // Supervisores disponibles (candidateSupervisors) para amarrar un líder.
+  // Si quien crea es un candidateSupervisor, solo puede amarrar a sí mismo.
+  const supervisoresDisponibles = isCandidateSupervisor
+    ? actors.filter((a: Actor) => a.id === actorActivo?.id)
+    : actors.filter((a: Actor) => a.role === 'candidateSupervisor');
 
   // Líderes disponibles para amarrar testigos y votantes
   const lideresDisponibles = actors.filter((a: Actor) => a.role === 'leader');
@@ -78,9 +88,10 @@ export const CreateUserModal: React.FC<Props> = ({ isOpen, onClose }) => {
   const municipiosDisponiblesStore = municipios.length > 0 ? municipios : MOCK_MUNICIPIOS;
   const municipiosFiltrados = municipiosDisponiblesStore.filter(m => m.departamentoId === departamentoId);
 
-  // Reglas de visibilidad y obligatoriedad por rol
-  const mostrarPartido = rol === 'candidateSupervisor' || rol === 'leader';
-  const mostrarCandidato = rol === 'candidateSupervisor' || rol === 'leader';
+  // Reglas de visibilidad y obligatoriedad por rol.
+  // Un supervisor de candidato ya tiene su partido/candidato fijado, no los vuelve a elegir.
+  const mostrarPartido = (rol === 'candidateSupervisor' || rol === 'leader') && !isCandidateSupervisor;
+  const mostrarCandidato = (rol === 'candidateSupervisor' || rol === 'leader') && !isCandidateSupervisor;
   // Departamento se muestra para leader, witness y candidateSupervisor (si no es nacional)
   const mostrarDepartamento = rol === 'leader' || rol === 'witness' || (rol === 'candidateSupervisor' && municipioId);
   // Municipio solo se muestra si ya se seleccionó un departamento
@@ -162,7 +173,7 @@ export const CreateUserModal: React.FC<Props> = ({ isOpen, onClose }) => {
         setNombre('');
         setEmail('');
         setPassword('');
-        setRol(allowedRoles[0]?.value || 'leader');
+        setRol(defaultRole || rolesOfrecidos[0]?.value || 'leader');
         setPartidoId('');
         setCandidatoId('');
         setDepartamentoId('');
@@ -283,9 +294,10 @@ export const CreateUserModal: React.FC<Props> = ({ isOpen, onClose }) => {
             <select
               value={rol}
               onChange={(e) => setRol(e.target.value as Actor['role'])}
-              className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 font-medium"
+              disabled={lockRole}
+              className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 font-medium disabled:opacity-70"
             >
-              {allowedRoles.map((r) => (
+              {rolesOfrecidos.map((r) => (
                 <option key={r.value} value={r.value}>
                   {r.label} — {r.desc}
                 </option>

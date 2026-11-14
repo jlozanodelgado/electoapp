@@ -4,8 +4,9 @@ import { useSecurityStore } from '../../store/securityStore';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
-import { Pencil, Trash2, UserPlus, Users, Shield, Target, Flag } from 'lucide-react';
+import { Pencil, Trash2, UserPlus, Users, Shield, Target, Flag, FileText } from 'lucide-react';
 import { Partido, Candidato } from '../../types/electoral';
+import { ImportarMasivoCandidato } from './ImportarMasivoCandidato';
 
 export const AdminCandidatoModule: React.FC = () => {
   const {
@@ -25,7 +26,7 @@ export const AdminCandidatoModule: React.FC = () => {
   const { currentActor } = useSecurityStore();
   const actor = currentActor();
 
-  const [tab, setTab] = useState<'lideres' | 'testigos' | 'votantes'>('lideres');
+  const [tab, setTab] = useState<'lideres' | 'testigos' | 'votantes' | 'importar'>('lideres');
   const [busqueda, setBusqueda] = useState('');
 
   const esSupervisorCandidato = actorRole === 'candidateSupervisor';
@@ -201,6 +202,17 @@ export const AdminCandidatoModule: React.FC = () => {
         >
           <Target className="w-3.5 h-3.5" />
           <span>Votantes ({misVotantes.length})</span>
+        </button>
+        <button
+          onClick={() => setTab('importar')}
+          className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold transition-all ${
+            tab === 'importar'
+              ? 'bg-emerald-600 text-white shadow-md'
+              : 'text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <FileText className="w-3.5 h-3.5" />
+          <span>Importar Excel</span>
         </button>
       </div>
 
@@ -394,6 +406,11 @@ export const AdminCandidatoModule: React.FC = () => {
             </div>
           )}
         </div>
+      )}
+      
+      {/* Importación masiva */}
+      {tab === 'importar' && (
+        <ImportarMasivoCandidato candidatoId={miCandidatoId} actorId={miActorId} />
       )}
     </div>
   );

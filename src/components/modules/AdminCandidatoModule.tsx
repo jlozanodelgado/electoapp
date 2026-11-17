@@ -4,7 +4,7 @@ import { useSecurityStore } from '../../store/securityStore';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
-import { Pencil, UserPlus, Users, Shield, Target, Flag, FileText, CheckCircle, Check } from 'lucide-react';
+import { Pencil, UserPlus, Users, Shield, Target, Flag, FileText, CheckCircle, Check, AlertTriangle } from 'lucide-react';
 import { Partido, Candidato } from '../../types/electoral';
 import { ImportarMasivoCandidato } from './ImportarMasivoCandidato';
 import { CreateUserModal } from '../modals/CreateUserModal';
@@ -36,6 +36,8 @@ export const AdminCandidatoModule: React.FC = () => {
   const [seccion, setSeccion] = useState<'lideres' | 'testigos' | 'votantes' | 'importar' | 'comando'>('lideres');
   const [busqueda, setBusqueda] = useState('');
   const [isNewLeaderOpen, setIsNewLeaderOpen] = useState(false);
+  const [filtroTransporte, setFiltroTransporte] = useState<'todos'|'si'|'no'>('todos');
+  const [filtroYaVoto, setFiltroYaVoto] = useState<'todos'|'si'|'no'>('todos');
 
   const esSupervisorCandidato = actorRole === 'candidateSupervisor';
   const miCandidatoId = actor?.candidatoId;
@@ -369,18 +371,67 @@ export const AdminCandidatoModule: React.FC = () => {
               <Target className="w-4 h-4 text-amber-400" />
               <h3 className="font-semibold text-white text-sm">Mis Votantes</h3>
             </div>
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={() => setIsNewVoterOpen(true)}
-              icon={<Target className="w-3.5 h-3.5" />}
-            >
-              Nuevo Votante
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => setIsNewVoterOpen(true)}
+                icon={<Target className="w-3.5 h-3.5" />}
+              >
+                Nuevo Votante
+              </Button>
+              <div className="flex items-center gap-1">
+                <span className="text-[10px] text-slate-400 font-medium">Transporte:</span>
+                <select
+                  value={filtroTransporte}
+                  onChange={(e)=>setFiltroTransporte(e.target.value as any)}
+                  className="bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-[10px] text-slate-200"
+                >
+                  <option value="todos">Todos</option>
+                  <option value="si">Sí</option>
+                  <option value="no">No</option>
+                </select>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="text-[10px] text-slate-400 font-medium">Día D:</span>
+                <select
+                  value={filtroYaVoto}
+                  onChange={(e)=>setFiltroYaVoto(e.target.value as any)}
+                  className="bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-[10px] text-slate-200"
+                >
+                  <option value="todos">Todos</option>
+                  <option value="si">Votaron</option>
+                  <option value="no">Pendientes</option>
+                </select>
+              </div>
+            </div>
           </div>
-          {votantesFiltrados.length === 0 ? (
+
+          {/* Filtros aplicados */}
+          {(() => {
+            let activo = false;
+            let txt = [];
+            if (filtroTransporte !== 'todos') { activo = true; txt.push(filtroTransporte === 'si' ? 'Transporte: SÍ' : 'Transporte: NO'); }
+            if (filtroYaVoto !== 'todos') { activo = true; txt.push(filtroYaVoto === 'si' ? 'Ya votó' : 'No votó aún'); }
+            if (!activo) return null;
+            return (
+              <div className="p-2 bg-amber-500/10 border border-amber-500/20 rounded-lg text-[10px] text-amber-300 mb-3 flex items-center gap-2">
+                <AlertTriangle className="w-3 h-3 mr-1" />
+                <span>{txt.join('  •  ')}</span>
+              </div>
+            );
+          })()}
+
+          {(() => {
+            let datos = votantesFiltrados;
+            if (filtroTransporte === 'si') datos = datos.filter(v => v.necesitaTransporte === true);
+            if (filtroTransporte === 'no') datos = datos.filter(v => v.necesitaTransporte === false);
+            if (filtroYaVoto === 'si') datos = datos.filter(v => v.yaVoto === true);
+            if (filtroYaVoto === 'no') datos = datos.filter(v => v.yaVoto === false);
+            return datos;
+          })().length === 0 ? (
             <div className="p-8 text-center text-slate-500 text-xs">
-              No hay votantes registrados.
+              No hay votantes que coincidan con los filtros.
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -389,53 +440,87 @@ export const AdminCandidatoModule: React.FC = () => {
                   <tr>
                     <th className="p-3">Votante</th>
                     <th className="p-3">Cédula</th>
+                    <th className="p-3">Barrio</th>
                     <th className="p-3">Intención</th>
-                    <th className="p-3">Líder</th>
+                    <th className="p-3 text-center">Transporte</th>
+                    <th className="p-3 text-center">Contactado</th>
                     <th className="p-3 text-center">Día D</th>
                     <th className="p-3 text-center">Acciones</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/50">
-                  {votantesFiltrados.map(v => {
-                    const lider = misLideres.find(l => l.id === v.leaderId);
-                    return (
-                      <tr key={v.id} className="hover:bg-slate-800/30 transition-colors">
-                        <td className="p-3">
-                          <p className="font-semibold text-white">{v.nombre}</p>
-                          <span className="text-[9px] text-slate-500 font-mono">CC {v.cedula}</span>
-                        </td>
-                        <td className="p-3">{v.barrio}</td>
-                        <td className="p-3">
-                          <span className={`text-[9px] px-2 py-0.5 rounded ${
-                            v.intencionVoto === 'voto_duro' ? 'bg-emerald-500/20 text-emerald-400' :
-                            v.intencionVoto === 'voto_blando' ? 'bg-blue-500/20 text-blue-400' :
-                            v.intencionVoto === 'indeciso' ? 'bg-amber-500/20 text-amber-400' :
-                            'bg-rose-500/20 text-rose-400'
-                          }`}>
-                            {v.intencionVoto.replace('_', ' ')}
-                          </span>
-                        </td>
-                        <td className="p-3">
-                          <span className="text-xs text-slate-300">{lider?.nombre || '-'}</span>
-                        </td>
-                        <td className="p-3 text-center">
-                          <span className={`text-[9px] px-2 py-0.5 rounded font-bold ${
-                            v.yaVoto ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-800 text-slate-500'
-                          }`}>
-                            {v.yaVoto ? 'VOTÓ' : 'PENDIENTE'}
-                          </span>
-                        </td>
-                        <td className="p-3 text-center">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => { setEditingVoter(v); }}
-                            icon={<Pencil className="w-3 h-3" />}
-                          />
-                        </td>
-                      </tr>
-                    );
-                  })}
+                  {(() => {
+                    let datos = votantesFiltrados;
+                    if (filtroTransporte === 'si') datos = datos.filter(v => v.necesitaTransporte === true);
+                    if (filtroTransporte === 'no') datos = datos.filter(v => v.necesitaTransporte === false);
+                    if (filtroYaVoto === 'si') datos = datos.filter(v => v.yaVoto === true);
+                    if (filtroYaVoto === 'no') datos = datos.filter(v => v.yaVoto === false);
+                    return datos.map(v => {
+                      const lider = misLideres.find(l => l.id === v.leaderId);
+                      return (
+                        <tr key={v.id} className="hover:bg-slate-800/30 transition-colors">
+                          <td className="p-3">
+                            <p className="font-semibold text-white">{v.nombre}</p>
+                            <span className="text-[9px] text-slate-500 font-mono">CC {v.cedula}</span>
+                          </td>
+                          <td className="p-3">{v.barrio || '-'}</td>
+                          <td className="p-3">
+                            <span className={`text-[9px] px-2 py-0.5 rounded ${
+                              v.intencionVoto === 'voto_duro' ? 'bg-emerald-500/20 text-emerald-400' :
+                              v.intencionVoto === 'voto_blando' ? 'bg-blue-500/20 text-blue-400' :
+                              v.intencionVoto === 'indeciso' ? 'bg-amber-500/20 text-amber-400' :
+                              'bg-rose-500/20 text-rose-400'
+                            }`}>
+                              {v.intencionVoto.replace('_', ' ')}
+                            </span>
+                          </td>
+                          <td className="p-3 text-center">
+                            <span className={`text-[9px] px-2 py-0.5 rounded font-bold ${
+                              v.necesitaTransporte === true ? 'bg-amber-500/20 text-amber-400' : 'bg-slate-800 text-slate-400'
+                            }`}>
+                              {v.necesitaTransporte === true ? 'SÍ' : 'NO'}
+                            </span>
+                          </td>
+                          <td className="p-3 text-center">
+                            <span className={`text-[9px] px-2 py-0.5 rounded font-bold ${
+                              v.contactado === true ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-800 text-slate-400'
+                            }`}>
+                              {v.contactado === true ? 'SÍ' : 'NO'}
+                            </span>
+                          </td>
+                          <td className="p-3 text-center">
+                            <span className={`text-[9px] px-2 py-0.5 rounded font-bold ${
+                              v.yaVoto ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-800 text-slate-500'
+                            }`}>
+                              {v.yaVoto ? 'VOTÓ' : 'PENDIENTE'}
+                            </span>
+                          </td>
+                          <td className="p-3 text-center">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => { setEditingVoter(v); }}
+                              icon={<Pencil className="w-3 h-3" />}
+                            />
+                          </td>
+                        </tr>
+                      );
+                    });
+                  })()}
+                  {(() => {
+                    let datos = votantesFiltrados;
+                    if (filtroTransporte === 'si') datos = datos.filter(v => v.necesitaTransporte === true);
+                    if (filtroTransporte === 'no') datos = datos.filter(v => v.necesitaTransporte === false);
+                    if (filtroYaVoto === 'si') datos = datos.filter(v => v.yaVoto === true);
+                    if (filtroYaVoto === 'no') datos = datos.filter(v => v.yaVoto === false);
+                    return datos.length === 0;
+                  })() && (
+                    <tr>
+                      <td colSpan={8} className="p-4 text-center text-slate-500 text-xs">
+                        No hay votantes que coincidan con los filtros.
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>

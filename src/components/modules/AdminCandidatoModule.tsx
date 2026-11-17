@@ -28,6 +28,8 @@ export const AdminCandidatoModule: React.FC = () => {
     setEditingTestigo,
     editingVoter,
     setEditingVoter,
+    updateVotante,
+    addToast,
   } = useElectoralStore();
 
   const { currentActor } = useSecurityStore();
@@ -482,11 +484,21 @@ export const AdminCandidatoModule: React.FC = () => {
                             </span>
                           </td>
                           <td className="p-3 text-center">
-                            <span className={`text-[9px] px-2 py-0.5 rounded font-bold ${
-                              v.contactado === true ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-800 text-slate-400'
-                            }`}>
-                              {v.contactado === true ? 'SÍ' : 'NO'}
-                            </span>
+                            <Button
+                              variant={v.contactado === true ? 'primary' : 'outline'}
+                              size="sm"
+                              onClick={() => {
+                                updateVotante(v.id, { contactado: !v.contactado });
+                                addToast({
+                                  type: 'success',
+                                  title: 'Contacto actualizado',
+                                  message: `${v.nombre} marcado como ${v.contactado ? 'no ' : ''}contactado.`,
+                                });
+                              }}
+                              icon={<CheckCircle className="w-3 h-3" />}
+                            >
+                              {v.contactado === true ? 'Contactado' : 'Contactar'}
+                            </Button>
                           </td>
                           <td className="p-3 text-center">
                             <span className={`text-[9px] px-2 py-0.5 rounded font-bold ${
